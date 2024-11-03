@@ -19,7 +19,6 @@ authors = ["Michał Koziarski", "Andrei Rekesh", "Dmytro Shevchuk", "Almer van d
 [tool.poetry.dependencies]
 torch-geometric = '2.5.3'
 torchmetrics = '1.2.0'
-torchtyping = '0.1.4'
 dgllife = '0.3.2'
 tqdm = '4.66.3'
 wandb = '0.15.12'

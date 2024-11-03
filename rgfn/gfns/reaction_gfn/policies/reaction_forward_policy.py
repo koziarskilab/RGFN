@@ -5,9 +5,8 @@ from typing import Any, Callable, Dict, List, Tuple, Type
 
 import gin
 import torch
-from torch import nn
+from torch import Tensor, nn
 from torch.nn import init
-from torchtyping import TensorType
 
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
 from rgfn.api.trajectories import Trajectories
@@ -49,7 +48,7 @@ class SharedEmbeddings:
     molecule_to_idx: Dict[Molecule, int]
     molecule_reaction_to_idx: Dict[Tuple[Molecule, Reaction], int]
 
-    all_embeddings: TensorType[float]
+    all_embeddings: Tensor
 
 
 class ReactantPositionalEncodingBase(abc.ABC, nn.Module, TrainingHooksMixin):
@@ -57,14 +56,14 @@ class ReactantPositionalEncodingBase(abc.ABC, nn.Module, TrainingHooksMixin):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.data_factory = data_factory
-        self._cache: TensorType[float] | None = None
+        self._cache: Tensor | None = None
         self.device = "cpu"
 
     @abc.abstractmethod
-    def _get_all_embeddings(self) -> TensorType[float]:
+    def _get_all_embeddings(self) -> Tensor:
         pass
 
-    def get_all_embeddings(self) -> TensorType[float]:
+    def get_all_embeddings(self) -> Tensor:
         if self._cache is None:
             self._cache = self._get_all_embeddings()
         return self._cache
@@ -83,7 +82,7 @@ class ReactantPositionalEncodingBase(abc.ABC, nn.Module, TrainingHooksMixin):
         return {}
 
     @abc.abstractmethod
-    def select_embeddings(self, items: List[Tuple[AnchoredReaction, int]]) -> TensorType[float]:
+    def select_embeddings(self, items: List[Tuple[AnchoredReaction, int]]) -> Tensor:
         pass
 
 
@@ -100,10 +99,10 @@ class ReactantSimplePositionalEncoding(ReactantPositionalEncodingBase):
         self.weights = nn.Parameter(torch.empty(total_embeddings, hidden_dim), requires_grad=True)
         init.kaiming_uniform_(self.weights, a=math.sqrt(5))
 
-    def _get_all_embeddings(self) -> TensorType[float]:
+    def _get_all_embeddings(self) -> Tensor:
         return self.weights
 
-    def select_embeddings(self, items: List[Tuple[AnchoredReaction, int]]) -> TensorType[float]:
+    def select_embeddings(self, items: List[Tuple[AnchoredReaction, int]]) -> Tensor:
         indices = [self.reaction_idx_to_embedding_idx[reaction.idx] + i for reaction, i in items]
         return torch.index_select(
             self.weights, index=torch.tensor(indices).long().to(self.device), dim=0
@@ -198,7 +197,7 @@ class ReactionForwardPolicy(
         self,
     ) -> Dict[
         Type[TIndexedActionSpace],
-        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], TensorType[float]],
+        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], Tensor],
     ]:
         return self._action_space_type_to_forward_fn
 
@@ -207,7 +206,7 @@ class ReactionForwardPolicy(
         states: List[ReactionState0],
         action_spaces: List[ReactionActionSpace0],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_idx = shared_embeddings.molecule_to_idx[None]
         embedding = torch.index_select(
             shared_embeddings.all_embeddings,
@@ -226,7 +225,7 @@ class ReactionForwardPolicy(
         states: List[ReactionStateA],
         action_spaces: List[ReactionActionSpaceA],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices = [shared_embeddings.molecule_to_idx[state.molecule] for state in states]
         embedding_indices = torch.tensor(embedding_indices).long().to(self.device)
         embeddings = torch.index_select(
@@ -243,7 +242,7 @@ class ReactionForwardPolicy(
         states: List[ReactionStateB],
         action_spaces: List[ReactionActionSpaceB],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         mol_embedding_indices = [
             shared_embeddings.molecule_reaction_to_idx[(state.molecule, state.anchored_reaction)]
             for state in states
@@ -304,7 +303,7 @@ class ReactionForwardPolicy(
         states: List[ReactionStateC],
         action_spaces: List[ReactionActionSpaceC],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices_list = []
         for action_space in action_spaces:
             embedding_indices = [
@@ -331,7 +330,7 @@ class ReactionForwardPolicy(
         states: List[ReactionState],
         action_spaces: List[ReactionActionSpaceEarlyTerminate],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         return torch.zeros((len(states), 1), device=self.device, dtype=torch.float32)
 
     def get_shared_embeddings(

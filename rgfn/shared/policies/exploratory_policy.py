@@ -3,7 +3,7 @@ from typing import List
 
 import gin
 import numpy as np
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.type_variables import TAction, TActionSpace, TState
@@ -88,8 +88,8 @@ class ExploratoryPolicy(PolicyBase[TState, TActionSpace, TAction]):
 
     def compute_action_log_probs(
         self, states: List[TState], action_spaces: List[TActionSpace], actions: List[TAction]
-    ) -> TensorType[float]:
+    ) -> Tensor:
         raise NotImplementedError()
 
-    def compute_states_log_flow(self, states: List[TState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[TState]) -> Tensor:
         raise NotImplementedError()

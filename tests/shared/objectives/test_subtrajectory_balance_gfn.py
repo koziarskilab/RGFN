@@ -3,7 +3,7 @@ from typing import List
 
 import pytest
 import torch
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.proxy_base import ProxyBase, ProxyOutput
@@ -35,10 +35,10 @@ class MockPolicy(PolicyBase[int, List[int], int]):
 
     def compute_action_log_probs(
         self, states: List[int], action_spaces: List[List[int]], actions: List[int]
-    ) -> TensorType[float]:
+    ) -> Tensor:
         return torch.tensor([1 / len(action_space) for action_space in action_spaces]).float()
 
-    def compute_states_log_flow(self, states: List[int]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[int]) -> Tensor:
         return torch.tensor(states).float()
 
     def clear_sampling_cache(self) -> None:

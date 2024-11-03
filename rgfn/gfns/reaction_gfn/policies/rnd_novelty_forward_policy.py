@@ -5,7 +5,6 @@ import gin
 import torch
 from torch import Tensor, nn
 from torch.nn import Parameter
-from torchtyping import TensorType
 
 from rgfn.api.trajectories import Trajectories
 from rgfn.api.type_variables import TAction, TState
@@ -44,8 +43,8 @@ from rgfn.shared.policies.uniform_policy import TIndexedActionSpace
 class SharedEmbeddings:
     molecule_to_idx: Dict[Molecule, int]
     molecule_reaction_to_idx: Dict[Tuple[Molecule, Reaction], int]
-    all_target_embeddings: TensorType[float]
-    all_predictor_embeddings: TensorType[float]
+    all_target_embeddings: Tensor
+    all_predictor_embeddings: Tensor
 
 
 @gin.configurable()
@@ -140,7 +139,7 @@ class RNDNoveltyForwardPolicy(
         self,
     ) -> Dict[
         Type[TIndexedActionSpace],
-        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], TensorType[float]],
+        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], Tensor],
     ]:
         return self._action_space_type_to_forward_fn
 
@@ -149,7 +148,7 @@ class RNDNoveltyForwardPolicy(
         states: List[ReactionState0],
         action_spaces: List[ReactionActionSpace0],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_idx = shared_embeddings.molecule_to_idx[None]
         index = torch.tensor([embedding_idx] * self.num_b_actions).long().to(self.device)
 
@@ -187,7 +186,7 @@ class RNDNoveltyForwardPolicy(
         states: List[ReactionStateA],
         action_spaces: List[ReactionActionSpaceA],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices = [shared_embeddings.molecule_to_idx[state.molecule] for state in states]
         embedding_indices = torch.tensor(embedding_indices).long().to(self.device)
 
@@ -233,7 +232,7 @@ class RNDNoveltyForwardPolicy(
         states: List[ReactionStateB],
         action_spaces: List[ReactionActionSpaceB],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices = [
             shared_embeddings.molecule_reaction_to_idx[(state.molecule, state.anchored_reaction)]
             for state in states
@@ -291,7 +290,7 @@ class RNDNoveltyForwardPolicy(
         states: List[ReactionStateC],
         action_spaces: List[ReactionActionSpaceC],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices_list = []
         for action_space in action_spaces:
             embedding_indices = [
@@ -325,7 +324,7 @@ class RNDNoveltyForwardPolicy(
         states: List[ReactionState],
         action_spaces: List[ReactionActionSpaceEarlyTerminate],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         return torch.zeros((len(states), 1), device=self.device, dtype=torch.float32)
 
     def get_shared_embeddings(
@@ -395,7 +394,7 @@ class RNDNoveltyForwardPolicy(
 
     def compute_state_action_novelty(
         self, states: List[TState], action_spaces: List[TIndexedActionSpace], actions: List[TAction]
-    ) -> TensorType[float]:
+    ) -> Tensor:
         # This part can be optimized: we don't need to compute novelty for the entire action spaces, but only
         # for the actions that were actually taken.
 
@@ -403,10 +402,10 @@ class RNDNoveltyForwardPolicy(
 
     def _select_actions_log_probs(
         self,
-        logits: TensorType[float],
+        logits: Tensor,
         action_spaces: Sequence[TIndexedActionSpace],
         actions: Sequence[TAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         """
         This method overrides the parent method and removes the log_softmax computation. As a result, it returns
         the logits corresponding to the chosen actions. It's leveraged in the `compute_action_log_probs` call in

@@ -4,7 +4,7 @@ from typing import Generic, List, TypeVar
 
 import gin
 import torch
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.type_variables import TAction, TState
@@ -75,7 +75,7 @@ class UniformPolicy(PolicyBase[TState, TIndexedActionSpace, TAction]):
         states: List[TState],
         action_spaces: List[TIndexedActionSpace],
         actions: List[TAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         """
         Compute the log probabilities of the given actions take in the given states (and corresponding action spaces).
 
@@ -96,5 +96,5 @@ class UniformPolicy(PolicyBase[TState, TIndexedActionSpace, TAction]):
         action_space_lengths = torch.clamp(action_space_lengths, min=1.0)
         return torch.log(1.0 / action_space_lengths)
 
-    def compute_states_log_flow(self, states: List[TState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[TState]) -> Tensor:
         raise NotImplementedError()

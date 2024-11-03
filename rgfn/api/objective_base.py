@@ -2,9 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, Generic, Iterator, List
 
-from torch import nn
+from torch import Tensor, nn
 from torch.nn import Parameter
-from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
@@ -22,7 +21,7 @@ class ObjectiveOutput:
         metrics: A dictionary of metrics.
     """
 
-    loss: TensorType[float]
+    loss: Tensor
     metrics: Dict[str, float] = field(default_factory=dict)
 
 

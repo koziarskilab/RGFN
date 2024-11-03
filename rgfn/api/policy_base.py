@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, List
 
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
 from rgfn.api.type_variables import TAction, TActionSpace, TState
@@ -41,7 +41,7 @@ class PolicyBase(Generic[TState, TActionSpace, TAction], ABC, TrainingHooksMixin
         states: List[TState],
         action_spaces: List[TActionSpace],
         actions: List[TAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         """
         Compute the log probabilities of the given actions take in the given states (and corresponding action spaces).
 
@@ -57,7 +57,7 @@ class PolicyBase(Generic[TState, TActionSpace, TAction], ABC, TrainingHooksMixin
         ...
 
     @abstractmethod
-    def compute_states_log_flow(self, states: List[TState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[TState]) -> Tensor:
         """
         Compute the log flows log(F(s)) of the given states. It is used in `SubTrajectoryBalanceGFN`/
 

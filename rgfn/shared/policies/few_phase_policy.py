@@ -2,9 +2,8 @@ import abc
 from typing import Callable, Dict, Generic, List, Sequence, Type, TypeVar
 
 import torch
-from torch import nn
+from torch import Tensor, nn
 from torch.distributions import Categorical
-from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.type_variables import TAction, TState
@@ -36,9 +35,7 @@ class FewPhasePolicyBase(
         self,
     ) -> Dict[
         Type[TIndexedActionSpace],
-        Callable[
-            [List[THashableState], List[TIndexedActionSpace], TSharedEmbeddings], TensorType[float]
-        ],
+        Callable[[List[THashableState], List[TIndexedActionSpace], TSharedEmbeddings], Tensor],
     ]:
         ...
 
@@ -72,7 +69,7 @@ class FewPhasePolicyBase(
         return [actions[state_to_action_idx[state_idx]] for state_idx in range(len(states))]
 
     def _sample_actions_from_logits(
-        self, logits: TensorType[float], action_spaces: List[TIndexedActionSpace]
+        self, logits: Tensor, action_spaces: List[TIndexedActionSpace]
     ) -> List[TAction]:
         """
         A helper function to sample actions from the log probabilities.
@@ -96,7 +93,7 @@ class FewPhasePolicyBase(
         states: List[TState],
         action_spaces: List[TIndexedActionSpace],
         actions: List[TAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         shared_embeddings = self.get_shared_embeddings(states, action_spaces)
 
         log_probs_list = []
@@ -132,10 +129,10 @@ class FewPhasePolicyBase(
 
     def _select_actions_log_probs(
         self,
-        logits: TensorType[float],
+        logits: Tensor,
         action_spaces: Sequence[TIndexedActionSpace],
         actions: Sequence[TAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         """
         A helper function to select the log probabilities of the actions.
 
@@ -160,5 +157,5 @@ class FewPhasePolicyBase(
         log_probs = torch.log_softmax(logits, dim=1)
         return torch.index_select(log_probs.view(-1), index=action_tensor_indices, dim=0)
 
-    def compute_states_log_flow(self, states: List[THashableState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[THashableState]) -> Tensor:
         raise NotImplementedError()

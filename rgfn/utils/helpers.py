@@ -5,7 +5,7 @@ from typing import Any, Dict, Hashable, Iterator, List, Literal, Set
 
 import numpy as np
 import torch
-from torchtyping import TensorType
+from torch import Tensor
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class ContentHeap:
         return iter(self.heap)
 
 
-def to_indices(counts: TensorType[int]) -> TensorType[int]:
+def to_indices(counts: Tensor) -> Tensor:
     indices = torch.arange(len(counts), device=counts.device)
     return torch.repeat_interleave(indices, counts).long()
 

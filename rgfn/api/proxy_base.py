@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Generic, List
 
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
 from rgfn.api.type_variables import TState
@@ -16,8 +16,8 @@ class ProxyOutput(Generic[TState]):
         may be used to compute metrics.
     """
 
-    value: TensorType[float]
-    components: Dict[str, TensorType[float]] | None = None
+    value: Tensor
+    components: Dict[str, Tensor] | None = None
 
 
 class ProxyBase(Generic[TState], ABC, TrainingHooksMixin):

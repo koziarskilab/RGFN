@@ -15,9 +15,8 @@ from dgllife.utils import (
 from rdkit import DataStructs
 from rdkit.Chem import MACCSkeys
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
-from torch import nn
+from torch import Tensor, nn
 from torch.nn import init
-from torchtyping import TensorType
 
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
 from rgfn.api.trajectories import Trajectories
@@ -29,9 +28,9 @@ class ActionEmbeddingBase(abc.ABC, nn.Module, TrainingHooksMixin):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.data_factory = data_factory
-        self._cache: TensorType[float] | None = None
+        self._cache: Tensor | None = None
 
-    def get_embeddings(self) -> TensorType[float]:
+    def get_embeddings(self) -> Tensor:
         if self._cache is None:
             self._cache = self._get_embeddings()
         return self._cache
@@ -50,7 +49,7 @@ class ActionEmbeddingBase(abc.ABC, nn.Module, TrainingHooksMixin):
         return {}
 
     @abc.abstractmethod
-    def _get_embeddings(self) -> TensorType[float]:
+    def _get_embeddings(self) -> Tensor:
         pass
 
 
@@ -63,7 +62,7 @@ class FragmentOneHotEmbedding(ActionEmbeddingBase):
         )
         init.kaiming_uniform_(self.weights, a=math.sqrt(5))
 
-    def _get_embeddings(self) -> TensorType[float]:
+    def _get_embeddings(self) -> Tensor:
         return self.weights
 
 
@@ -77,7 +76,7 @@ class ReactionsOneHotEmbedding(ActionEmbeddingBase):
         )
         init.kaiming_uniform_(self.weights, a=math.sqrt(5))
 
-    def _get_embeddings(self) -> TensorType[float]:
+    def _get_embeddings(self) -> Tensor:
         return self.weights
 
 
@@ -117,7 +116,7 @@ class FragmentFingerprintEmbedding(ActionEmbeddingBase):
                 nn.Linear(hidden_dim, hidden_dim),
             )
 
-    def _get_fingerprints(self) -> TensorType[float]:
+    def _get_fingerprints(self) -> Tensor:
         fps_list = []
         for molecule in self.fragments:
             mol = molecule.rdkit_mol
@@ -140,7 +139,7 @@ class FragmentFingerprintEmbedding(ActionEmbeddingBase):
         fps_numpy = fps_numpy[:, np.any(fps_numpy, axis=0)]
         return torch.tensor(fps_numpy).float()
 
-    def _get_embeddings(self) -> TensorType[float]:
+    def _get_embeddings(self) -> Tensor:
         fingerprints = self.fp_embedding(self.all_fingerprints)
         if self.one_hot_weight > 0:
             return fingerprints + self.one_hot_weight * self.one_hot
@@ -205,7 +204,7 @@ class FragmentGNNEmbedding(ActionEmbeddingBase):
             graphs.append(graph)
         return dgl.batch(graphs)
 
-    def _get_embeddings(self) -> TensorType[float]:
+    def _get_embeddings(self) -> Tensor:
         node_embeddings = self.gnn(self.batch, self.batch.ndata["h"])
         graph_embeddings = torch.zeros(
             size=(len(self.fragments), self.hidden_dim),

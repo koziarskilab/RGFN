@@ -3,8 +3,8 @@ from typing import Callable, Dict, Iterator, List, Type
 
 import gin
 import torch
+from torch import Tensor
 from torch.nn import Parameter
-from torchtyping import TensorType
 
 from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
@@ -68,7 +68,7 @@ class ReactionForwardPolicyWithRND(
         self,
     ) -> Dict[
         Type[TIndexedActionSpace],
-        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], TensorType[float]],
+        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], Tensor],
     ]:
         return self._action_space_type_to_forward_fn
 
@@ -80,7 +80,7 @@ class ReactionForwardPolicyWithRND(
         states: List[ReactionState0],
         action_spaces: List[ReactionActionSpace0],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         logits_1 = self.reaction_forward_policy._forward_0(
             states, action_spaces, shared_embeddings.forward_shared_embeddings
         )
@@ -94,7 +94,7 @@ class ReactionForwardPolicyWithRND(
         states: List[ReactionStateA],
         action_spaces: List[ReactionActionSpaceA],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         logits_1 = self.reaction_forward_policy._forward_a(
             states, action_spaces, shared_embeddings.forward_shared_embeddings
         )
@@ -108,7 +108,7 @@ class ReactionForwardPolicyWithRND(
         states: List[ReactionStateB],
         action_spaces: List[ReactionActionSpaceB],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         logits_1 = self.reaction_forward_policy._forward_b(
             states, action_spaces, shared_embeddings.forward_shared_embeddings
         )
@@ -122,7 +122,7 @@ class ReactionForwardPolicyWithRND(
         states: List[ReactionStateC],
         action_spaces: List[ReactionActionSpaceC],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         logits_1 = self.reaction_forward_policy._forward_c(
             states, action_spaces, shared_embeddings.forward_shared_embeddings
         )
@@ -136,7 +136,7 @@ class ReactionForwardPolicyWithRND(
         states: List[ReactionState],
         action_spaces: List[ReactionActionSpaceEarlyTerminate],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         return torch.zeros((len(states), 1), device=self.device, dtype=torch.float32)
 
     def get_shared_embeddings(

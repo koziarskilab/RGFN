@@ -5,7 +5,7 @@ import pytest
 import torch
 from shared.objectives.test_subtrajectory_balance_gfn import MockProxy
 from shared.policies.test_uniform_policy import IndexedList
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.env_base import EnvBase
 from rgfn.api.reward import Reward
@@ -33,7 +33,7 @@ class MockEnv(EnvBase[int, IndexedList, int]):
     def apply_backward_actions(self, states: List[int], actions: List[IndexedList]) -> List[int]:
         return [state - action for state, action in zip(states, actions)]
 
-    def get_terminal_mask(self, states: List[int]) -> TensorType["n_states", bool]:
+    def get_terminal_mask(self, states: List[int]) -> Tensor:
         return torch.tensor([state >= self.max_sum for state in states]).bool()
 
     def get_source_mask(self, states: List[int]) -> List[bool]:

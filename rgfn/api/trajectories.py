@@ -2,7 +2,7 @@ import itertools
 from typing import Any, Generic, List
 
 import torch
-from torchtyping import TensorType
+from torch import Tensor
 
 from rgfn.api.reward_output import RewardOutput
 from rgfn.api.type_variables import TAction, TActionSpace, TState
@@ -31,9 +31,9 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
         self._backward_action_spaces_list: List[List[TActionSpace]] = []
         self._actions_list: List[List[TAction]] = []
         self._reward_outputs: RewardOutput | None = None
-        self._forward_log_probs_flat: TensorType[float] | None = None
-        self._backward_log_probs_flat: TensorType[float] | None = None
-        self._log_flows_flat: TensorType[float] | None = None
+        self._forward_log_probs_flat: Tensor | None = None
+        self._backward_log_probs_flat: Tensor | None = None
+        self._log_flows_flat: Tensor | None = None
 
     def __len__(self):
         """
@@ -165,7 +165,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
             for action_space in action_spaces
         ]
 
-    def get_index_flat(self) -> TensorType[int]:
+    def get_index_flat(self) -> Tensor:
         """
         Return a tensor of indices. i-th element of the tensor is the index of the trajectory to which the i-th action
             belongs.
@@ -203,7 +203,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
             raise ValueError("Trajectories have no rewards")
         return self._reward_outputs
 
-    def set_forward_log_probs_flat(self, forward_log_probs_flat: TensorType[float]) -> None:
+    def set_forward_log_probs_flat(self, forward_log_probs_flat: Tensor) -> None:
         """
         Set the forward log probabilities of the actions taken in the trajectories.
 
@@ -215,7 +215,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
         """
         self._forward_log_probs_flat = forward_log_probs_flat
 
-    def get_forward_log_probs_flat(self) -> TensorType[float]:
+    def get_forward_log_probs_flat(self) -> Tensor:
         """
         Return the forward log probabilities of the actions taken in the trajectories.
 
@@ -226,7 +226,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
             raise ValueError("Trajectories have no forward log probs")
         return self._forward_log_probs_flat
 
-    def set_backward_log_probs_flat(self, backward_log_probs_flat: TensorType[float]) -> None:
+    def set_backward_log_probs_flat(self, backward_log_probs_flat: Tensor) -> None:
         """
         Set the backward log probabilities of the actions taken in the trajectories.
 
@@ -238,7 +238,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
         """
         self._backward_log_probs_flat = backward_log_probs_flat
 
-    def get_backward_log_probs_flat(self) -> TensorType[float]:
+    def get_backward_log_probs_flat(self) -> Tensor:
         """
         Return the backward log probabilities of the actions taken in the trajectories.
 
@@ -249,7 +249,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
             raise ValueError("Trajectories have no backward log probs")
         return self._backward_log_probs_flat
 
-    def set_log_flows_flat(self, log_flows_flat: TensorType[float]) -> None:
+    def set_log_flows_flat(self, log_flows_flat: Tensor) -> None:
         """
         Set the log flows of the states in the trajectories.
 
@@ -261,7 +261,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
         """
         self._log_flows_flat = log_flows_flat
 
-    def get_log_flows_flat(self) -> TensorType[float]:
+    def get_log_flows_flat(self) -> Tensor:
         """
         Return the log flows of the states in the trajectories.
 
@@ -302,7 +302,7 @@ class Trajectories(Generic[TState, TActionSpace, TAction]):
         return trajectories
 
     def masked_select(
-        self, mask: TensorType[bool] | List[bool]
+        self, mask: Tensor | List[bool]
     ) -> "Trajectories[TState, TActionSpace, TAction]":
         """
         Select trajectories from the batch using the mask. It is used to select only the trajectories that are not

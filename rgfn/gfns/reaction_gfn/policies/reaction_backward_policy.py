@@ -3,9 +3,8 @@ from typing import Callable, Dict, Iterator, List, Tuple, Type
 
 import gin
 import torch
-from torch import nn
+from torch import Tensor, nn
 from torch.nn import Parameter
-from torchtyping import TensorType
 
 from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
@@ -39,7 +38,7 @@ from rgfn.shared.policies.uniform_policy import TIndexedActionSpace
 @dataclass(frozen=True)
 class SharedEmbeddings:
     molecule_and_reaction_to_idx: Dict[Tuple[Molecule, Reaction], int]
-    all_embeddings: TensorType[float]
+    all_embeddings: Tensor
 
 
 @gin.configurable()
@@ -98,7 +97,7 @@ class ReactionBackwardPolicy(
         self,
     ) -> Dict[
         Type[TIndexedActionSpace],
-        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], TensorType[float]],
+        Callable[[List[TState], List[TIndexedActionSpace], TSharedEmbeddings], Tensor],
     ]:
         return self._action_space_type_to_forward_fn
 
@@ -107,7 +106,7 @@ class ReactionBackwardPolicy(
         states: List[ReactionStateC],
         action_spaces: List[ReactionActionSpaceC],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         embedding_indices_list = []
         for action_space in action_spaces:
             embedding_indices = [
@@ -133,7 +132,7 @@ class ReactionBackwardPolicy(
         states: List[ReactionState],
         action_spaces: List[ReactionActionSpace],
         shared_embeddings: SharedEmbeddings,
-    ) -> TensorType[float]:
+    ) -> Tensor:
         assert len(states) == len(action_spaces)
         max_action_idx = max(
             action_space.get_possible_actions_indices()[0] for action_space in action_spaces
@@ -187,5 +186,5 @@ class ReactionBackwardPolicy(
             return super().parameters(recurse)
         return self.mlp_c.parameters(recurse)
 
-    def compute_states_log_flow(self, states: List[ReactionState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[ReactionState]) -> Tensor:
         raise NotImplementedError()

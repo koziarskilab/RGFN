@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 import torch
-from torchtyping import TensorType
+from torch import Tensor
 
 
 @dataclass
@@ -19,10 +19,10 @@ class RewardOutput:
             proxy values have no components.
     """
 
-    log_reward: TensorType[float]
-    reward: TensorType[float]
-    proxy: TensorType[float]
-    proxy_components: Dict[str, TensorType[float]] | None = None
+    log_reward: Tensor
+    reward: Tensor
+    proxy: Tensor
+    proxy_components: Dict[str, Tensor] | None = None
 
     def set_device(self, device: str, recursive: bool = True):
         """
@@ -71,7 +71,7 @@ class RewardOutput:
             proxy_components=new_proxy_components,
         )
 
-    def masked_select(self, mask: TensorType[bool]) -> "RewardOutput":
+    def masked_select(self, mask: Tensor) -> "RewardOutput":
         """
         Select a subset of the RewardOutput object using a boolean mask. Used in `Trajectories.masked_select` method.
 

@@ -2,8 +2,8 @@ from typing import Dict, Hashable, List, TypeVar
 
 import gin
 import torch
+from torch import Tensor
 from torch.distributions import Categorical
-from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.trajectories import Trajectories
@@ -21,7 +21,7 @@ class ActionCountPolicy(PolicyBase[TState, TIndexedActionSpace, THashableAction]
         self.temperature = temperature
         self.device = "cpu"
 
-    def _forward(self, action_spaces: List[TIndexedActionSpace]) -> TensorType[float]:
+    def _forward(self, action_spaces: List[TIndexedActionSpace]) -> Tensor:
         max_action_space_size = max(
             action_space.get_possible_actions_indices()[-1] for action_space in action_spaces
         )
@@ -58,7 +58,7 @@ class ActionCountPolicy(PolicyBase[TState, TIndexedActionSpace, THashableAction]
         states: List[TState],
         action_spaces: List[TIndexedActionSpace],
         actions: List[THashableAction],
-    ) -> TensorType[float]:
+    ) -> Tensor:
         log_probs = self._forward(action_spaces)
         action_indices = [
             action_space.get_idx_of_action(action)  # type: ignore
@@ -72,7 +72,7 @@ class ActionCountPolicy(PolicyBase[TState, TIndexedActionSpace, THashableAction]
         log_probs = torch.index_select(log_probs.view(-1), index=action_tensor_indices, dim=0)
         return log_probs
 
-    def compute_states_log_flow(self, states: List[TState]) -> TensorType[float]:
+    def compute_states_log_flow(self, states: List[TState]) -> Tensor:
         pass
 
     def on_end_computing_objective(
