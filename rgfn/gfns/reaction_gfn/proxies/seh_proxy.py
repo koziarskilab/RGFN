@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from rdkit import Chem
 from torch_geometric.nn import NNConv, Set2Set
 
-from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
     ReactionState,
     ReactionStateEarlyTerminal,

@@ -4,8 +4,7 @@ from typing import Dict, List, Tuple
 
 import gin
 import pandas as pd
-from rdkit import Chem
-from rdkit.Chem import Mol, MolFromSmiles, MolToSmiles
+from rdkit.Chem import MolFromSmiles, MolToSmiles
 
 from rgfn.gfns.reaction_gfn.api.data_structures import AnchoredReaction, Molecule
 from rgfn.gfns.reaction_gfn.api.reaction_api import Reaction

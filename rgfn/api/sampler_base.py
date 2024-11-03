@@ -1,7 +1,7 @@
 import abc
 from abc import ABC
 from itertools import compress
-from typing import Dict, Generic, Iterator, List
+from typing import Generic, Iterator, List
 
 import torch
 

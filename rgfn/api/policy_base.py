@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Generic, List
+from typing import Generic, List
 
 from torchtyping import TensorType
 
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
-from rgfn.api.trajectories import Trajectories
 from rgfn.api.type_variables import TAction, TActionSpace, TState
 
 

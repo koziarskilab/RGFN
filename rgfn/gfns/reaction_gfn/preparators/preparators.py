@@ -5,7 +5,7 @@
 import abc
 import os
 from multiprocessing import Pool
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import gin
 from openbabel import openbabel as ob
@@ -87,7 +87,7 @@ class MeekoLigandPreparator(BasePreparator):
 
     def _check_install(self) -> None:
         try:
-            import meeko
+            pass
         except ImportError:
             raise Exception("Meeko package isn't installed.")
 

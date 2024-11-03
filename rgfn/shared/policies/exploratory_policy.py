@@ -1,12 +1,11 @@
 from itertools import compress
-from typing import Dict, List
+from typing import List
 
 import gin
 import numpy as np
 from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
-from rgfn.api.trajectories import Trajectories
 from rgfn.api.type_variables import TAction, TActionSpace, TState
 
 

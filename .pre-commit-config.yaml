@@ -31,6 +31,13 @@ repos:
         name: "black"
         args: [ "--config=pyproject.toml" ]
 
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+    - id: autoflake
+      name: "autoflake"
+      args: [ "--in-place", "--remove-all-unused-imports", "--ignore-init-module-imports" ]
+      files: \.py$
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0

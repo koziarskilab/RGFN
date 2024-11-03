@@ -5,7 +5,6 @@ import torch
 from torch import Tensor
 
 from rgfn.api.proxy_base import ProxyBase
-from rgfn.api.trajectories import Trajectories
 from rgfn.shared.proxies.cached_proxy import CachedProxyBase, THashableState
 
 

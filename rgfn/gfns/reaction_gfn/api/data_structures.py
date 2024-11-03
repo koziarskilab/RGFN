@@ -1,6 +1,5 @@
-import abc
 from dataclasses import InitVar, dataclass, field
-from typing import Any, FrozenSet, Generic, List, NamedTuple, Tuple, TypeVar
+from typing import Tuple
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, MolFromSmarts

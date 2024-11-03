@@ -1,8 +1,5 @@
-import abc
 from dataclasses import dataclass, field
-from typing import Any, FrozenSet, Generic, List, NamedTuple, Tuple, TypeVar
-
-from rdkit import Chem
+from typing import Any, List, Tuple
 
 from rgfn.shared.policies.uniform_policy import IndexedActionSpaceBase
 

@@ -1,6 +1,5 @@
 import abc
-from functools import singledispatch
-from typing import Any, Callable, Dict, Generic, List, Sequence, Tuple, Type, TypeVar
+from typing import Callable, Dict, Generic, List, Sequence, Type, TypeVar
 
 import torch
 from torch import nn
@@ -8,7 +7,6 @@ from torch.distributions import Categorical
 from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
-from rgfn.api.trajectories import Trajectories
 from rgfn.api.type_variables import TAction, TState
 from rgfn.shared.policies.uniform_policy import TIndexedActionSpace
 from rgfn.shared.proxies.cached_proxy import THashableState

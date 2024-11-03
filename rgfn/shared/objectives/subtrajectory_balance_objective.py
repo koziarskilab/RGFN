@@ -1,5 +1,3 @@
-from typing import Generic
-
 import gin
 import torch
 from torch_geometric.utils import to_dense_batch

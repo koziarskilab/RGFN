@@ -1,6 +1,6 @@
 import abc
 from abc import ABC
-from typing import Dict, Generic, Iterator, List
+from typing import Generic, Iterator, List
 
 from rgfn.api.sampler_base import SamplerBase
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin

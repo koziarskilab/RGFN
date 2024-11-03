@@ -1,9 +1,7 @@
-import pickle
 from pathlib import Path
 from typing import Any, Dict
 
 import gin
-import wandb
 
 from .logger_base import LoggerBase
 

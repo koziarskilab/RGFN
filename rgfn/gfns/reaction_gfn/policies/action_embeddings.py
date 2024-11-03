@@ -12,7 +12,7 @@ from dgllife.utils import (
     CanonicalBondFeaturizer,
     SMILESToBigraph,
 )
-from rdkit import Chem, DataStructs
+from rdkit import DataStructs
 from rdkit.Chem import MACCSkeys
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
 from torch import nn

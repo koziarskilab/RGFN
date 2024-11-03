@@ -1,20 +1,17 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple, Type
+from typing import Callable, Dict, Iterator, List, Tuple, Type
 
 import gin
 import torch
 from torch import nn
-from torch.distributions import Categorical
 from torch.nn import Parameter
 from torchtyping import TensorType
 
-from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
     Molecule,
     Reaction,
     ReactionAction,
-    ReactionActionA,
     ReactionActionSpace,
     ReactionActionSpace0,
     ReactionActionSpace0Invalid,

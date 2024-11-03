@@ -3,12 +3,10 @@ from typing import Callable, Dict, Iterator, List, Type
 
 import gin
 import torch
-from torch import nn
 from torch.nn import Parameter
 from torchtyping import TensorType
 
-from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
     ReactionAction,
     ReactionActionSpace,

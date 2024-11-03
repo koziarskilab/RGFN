@@ -1,23 +1,17 @@
 from dataclasses import dataclass
-from functools import singledispatch
-from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple, Type
+from typing import Callable, Dict, Iterator, List, Sequence, Tuple, Type
 
 import gin
 import torch
-from rdkit import Chem
 from torch import Tensor, nn
-from torch.distributions import Categorical
 from torch.nn import Parameter
 from torchtyping import TensorType
 
-from rgfn.api.policy_base import PolicyBase
 from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TAction, TState
 from rgfn.gfns.reaction_gfn.api.data_structures import Molecule, Reaction
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
     ReactionAction,
-    ReactionActionA,
-    ReactionActionEarlyTerminate,
     ReactionActionSpace,
     ReactionActionSpace0,
     ReactionActionSpace0Invalid,
@@ -33,7 +27,6 @@ from rgfn.gfns.reaction_gfn.api.reaction_api import (
 )
 from rgfn.gfns.reaction_gfn.api.reaction_data_factory import ReactionDataFactory
 from rgfn.gfns.reaction_gfn.policies.action_embeddings import (
-    ActionEmbeddingBase,
     FragmentOneHotEmbedding,
     ReactionsOneHotEmbedding,
 )

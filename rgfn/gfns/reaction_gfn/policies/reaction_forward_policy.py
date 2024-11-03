@@ -1,21 +1,17 @@
 import abc
 import math
 from dataclasses import dataclass
-from functools import singledispatch
-from typing import Any, Callable, Dict, List, Sequence, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type
 
 import gin
 import torch
-from rdkit import Chem
 from torch import nn
-from torch.distributions import Categorical
 from torch.nn import init
 from torchtyping import TensorType
 
-from rgfn.api.policy_base import PolicyBase
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
 from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TState
 from rgfn.gfns.reaction_gfn.api.data_structures import (
     AnchoredReaction,
     Molecule,
@@ -23,8 +19,6 @@ from rgfn.gfns.reaction_gfn.api.data_structures import (
 )
 from rgfn.gfns.reaction_gfn.api.reaction_api import (
     ReactionAction,
-    ReactionActionA,
-    ReactionActionEarlyTerminate,
     ReactionActionSpace,
     ReactionActionSpace0,
     ReactionActionSpace0Invalid,
@@ -45,11 +39,7 @@ from rgfn.gfns.reaction_gfn.policies.graph_transformer import (
     mol2graph,
     mols2batch,
 )
-from rgfn.gfns.reaction_gfn.policies.utils import (
-    counts_to_batch_indices,
-    one_hot,
-    to_dense_embeddings,
-)
+from rgfn.gfns.reaction_gfn.policies.utils import one_hot, to_dense_embeddings
 from rgfn.shared.policies.few_phase_policy import FewPhasePolicyBase, TSharedEmbeddings
 from rgfn.shared.policies.uniform_policy import TIndexedActionSpace
 

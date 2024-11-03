@@ -7,7 +7,7 @@ from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
 from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TState
 from rgfn.shared.policies.uniform_policy import TIndexedActionSpace
 
 THashableAction = TypeVar("THashableAction", bound=Hashable)

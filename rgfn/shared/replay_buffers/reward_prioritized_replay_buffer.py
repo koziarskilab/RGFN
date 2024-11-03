@@ -1,4 +1,4 @@
-from typing import Generic, Hashable, Iterator, List, Set, TypeVar
+from typing import Hashable, Iterator, List, Set, TypeVar
 
 import gin
 import numpy as np
@@ -8,7 +8,7 @@ from more_itertools import chunked
 from rgfn.api.replay_buffer_base import ReplayBufferBase
 from rgfn.api.sampler_base import SamplerBase
 from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
+from rgfn.api.type_variables import TAction, TActionSpace
 
 THashableState = TypeVar("THashableState", bound=Hashable)
 

@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Generic, List, Literal
+from typing import Generic, List, Literal
 
 import gin
 import torch
@@ -7,7 +7,6 @@ import torch
 from rgfn.api.proxy_base import ProxyBase
 from rgfn.api.reward_output import RewardOutput
 from rgfn.api.training_hooks_mixin import TrainingHooksMixin
-from rgfn.api.trajectories import Trajectories
 from rgfn.api.type_variables import TState
 
 

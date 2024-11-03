@@ -1,11 +1,7 @@
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import torch
 from torch_geometric.utils import to_dense_batch
-from torchtyping import TensorType
-
-from rgfn.gfns.reaction_gfn.api.data_structures import Molecule, Reaction
 
 
 def counts_to_batch_indices(counts: Sequence[int], device: str | torch.device) -> torch.Tensor:

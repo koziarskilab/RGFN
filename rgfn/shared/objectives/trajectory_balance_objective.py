@@ -1,4 +1,4 @@
-from typing import Generic, Iterator
+from typing import Iterator
 
 import gin
 import torch
