@@ -4,7 +4,7 @@ from gfns.helpers.proxy_test_helpers import (
     helper__test_proxy__returns_sensible_values,
 )
 
-from rgfn import RandomSampler, ReinventPriorProxy, UniformPolicy
+from rgfn import RandomSampler, UniformPolicy
 from rgfn.gfns.reaction_gfn.proxies.rnd_novelty_proxy import RNDNoveltyProxy
 from rgfn.utils.helpers import seed_everything
 

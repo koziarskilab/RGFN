@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List
+from typing import List
 
 import pytest
 import torch
@@ -9,7 +9,6 @@ from rgfn.api.policy_base import PolicyBase
 from rgfn.api.proxy_base import ProxyBase, ProxyOutput
 from rgfn.api.reward import Reward
 from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
 from rgfn.shared.objectives import SubTrajectoryBalanceObjective
 
 

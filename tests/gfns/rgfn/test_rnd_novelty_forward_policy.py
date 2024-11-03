@@ -1,14 +1,10 @@
 # can return sensible log probs for any trajectory
 import torch
 from gfns.helpers.policy_test_helpers import (
-    helper__test_forward_policy__returns_sensible_log_probs,
     helper__test_forward_policy__samples_only_allowed_actions,
 )
 
 from rgfn import RandomSampler, UniformPolicy
-from rgfn.gfns.reaction_gfn.policies.reaction_forward_policy import (
-    ReactionForwardPolicy,
-)
 from rgfn.gfns.reaction_gfn.policies.rnd_novelty_forward_policy import (
     RNDNoveltyForwardPolicy,
 )

@@ -1,6 +1,6 @@
 from rgfn import ReactionDataFactory
 
-from .fixtures import *
+from .fixtures import *  # noqa
 
 
 def test__data_factory_anchored_reactions(rgfn_data_factory: ReactionDataFactory):

@@ -2,17 +2,9 @@
 from gfns.helpers.policy_test_helpers import (
     helper__test_backward_policy__returns_sensible_log_probs,
     helper__test_backward_policy__samples_only_allowed_actions,
-    helper__test_forward_policy__returns_sensible_log_probs,
-    helper__test_forward_policy__samples_only_allowed_actions,
 )
 
 from rgfn import ActionCountPolicy
-from rgfn.gfns.reaction_gfn.policies.reaction_backward_policy import (
-    ReactionBackwardPolicy,
-)
-from rgfn.gfns.reaction_gfn.policies.reaction_forward_policy import (
-    ReactionForwardPolicy,
-)
 
 from .fixtures import *
 

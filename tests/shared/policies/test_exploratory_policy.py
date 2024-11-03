@@ -1,11 +1,9 @@
-from typing import Dict, List
+from typing import List
 
 import pytest
 from torchtyping import TensorType
 
 from rgfn.api.policy_base import PolicyBase
-from rgfn.api.trajectories import Trajectories
-from rgfn.api.type_variables import TAction, TActionSpace, TState
 from rgfn.shared.policies.exploratory_policy import ExploratoryPolicy
 from rgfn.utils.helpers import seed_everything
 
