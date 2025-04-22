@@ -1,7 +1,7 @@
 # RGFN: Reaction-GFlowNet
 
 Code for "RGFN: Synthesizable Molecular Generation Using GFlowNets" [[arXiv]](https://arxiv.org/abs/2406.08506).
-Repository based on [https://github.com/gmum/RetroGFN](https://github.com/gmum/RetroGFN).
+Repository based on [RetroGFN](https://github.com/gmum/RetroGFN).
 
 RGFN is a generative model for designing diverse, high-reward small molecules. All produced molecules are highly likely to be synthesizable through the proposed synthesis pathways and cost ~100x less than those produced by competing methods. This is achieved by operating exclusively in the space of high-yield chemical reactions and low-cost reactants.
 
@@ -56,54 +56,6 @@ The default installation path points to `quickvina_dir`. To make this work with 
 
 ```bash
 ln -s <your-Vina-GPU-2.1_installation_path> quickvina_dir
-```
-
-</details>
-
-<details><summary><h3 style="display:inline-block">(Optional) Setup Gnina</h3></summary>
-
-To set up Gnina for use in the Gnina rescoring proxy, run the following command:
-
-```bash
-sh external/setup_gnina.sh
-```
-**NOTE:** Gnina rescoring changes the range of rewards to (0, 1). Because of that, it will be necessary to adjust `Reward.beta` parameter when compared to standard docking. Assuming the default beta of 4 for docking scores, a reasonable value would be 48, the default beta for the senolytic proxy.
-
-</details>
-
-<details><summary><h3 style="display:inline-block">(Optional) Setup REINVENT priors</h3></summary>
-
-To setup environment for REINVENT priors, run the following commands:
-
-```bash
-pip install xxhash==3.4.1 molvs==0.1.1 tensorboard==2.16.2 tomli==2.0.1 pathos==0.3.2 numpy==1.26.4 mmpdb==2.1
-
-# If using CUDA (NOTE: this assumes CUDA 11.8, replace with your CUDA version):
-pip install torchvision==0.18.1+cu118 --no-deps --index-url https://download.pytorch.org/whl/cu118
-
-# If using CPU:
-pip install torchvision==0.18.1 --no-deps --index-url https://download.pytorch.org/whl/cpu
-```
-
-To download the code for REINVENT priors, run the following command:
-
-```bash
-sh external/setup_reinvent.sh
-```
-
-Note that the reinvent repository is heavy (~2GB). If you want to decrease its size after it has been downloaded
-remove `external/reinvent/.git` directory (~1.2GB) and unused priors from `external/reinvent/priors` (~0.7GB).
-
-In the case of issues with libxrender library, install it with conda:
-
-```bash
-conda install xorg-libxrender
-```
-
-or with apt-get:
-
-```bash
-sudo apt-get install libxrender1
 ```
 
 </details>
@@ -188,9 +140,11 @@ Under `rgfn.gfns`, the repository provides the implementation of the GFlowNets.
 
 ```text
 @article{koziarski2024rgfn,
-  title={RGFN: Synthesizable Molecular Generation Using GFlowNets},
-  author={Koziarski, Micha{\l} and Rekesh, Andrei and Shevchuk, Dmytro and van der Sloot, Almer and Gai{\'n}ski, Piotr and Bengio, Yoshua and Liu, Cheng-Hao and Tyers, Mike and Batey, Robert A},
-  journal={arXiv preprint arXiv:2406.08506},
+  title={{RGFN}: Synthesizable molecular generation using {GFlowNets}},
+  author={Koziarski, Micha{\l} and Rekesh, Andrei and Shevchuk, Dmytro and van der Sloot, Almer and Gai{\'n}ski, Piotr and Bengio, Yoshua and Liu, Chenghao and Tyers, Mike and Batey, Robert},
+  journal={Advances in Neural Information Processing Systems},
+  volume={37},
+  pages={46908--46955},
   year={2024}
 }
 ```
