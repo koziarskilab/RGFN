@@ -93,6 +93,9 @@ class FragmentFingerprintEmbedding(ActionEmbeddingBase):
     ):
         super().__init__(data_factory, hidden_dim)
         self.fingerprint_list = fingerprint_list
+        self.fragments = self.data_factory.get_fragments()
+        if not self.fragments:
+             print("Warning: FragmentFingerprintEmbedding received an empty fragment list from data_factory.")
 
         self.one_hot_weight = one_hot_weight
         self.one_hot = nn.Parameter(
@@ -147,7 +150,7 @@ class FragmentFingerprintEmbedding(ActionEmbeddingBase):
 
     def set_device(self, device: str, recursive: bool = True):
         self.all_fingerprints = self.all_fingerprints.to(device)
-        self.super().set_device(device, recursive=recursive)
+        super().set_device(device, recursive=recursive)
 
 
 @gin.configurable()
