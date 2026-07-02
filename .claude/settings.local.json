@@ -212,7 +212,13 @@
       "Bash(pre-commit run *)",
       "Bash(sed -i 's/^### /## /' 015_fraggfn-6td3-baseline.md 018_synthesizability-metric-aizynthfinder.md)",
       "Bash(grep -nE '^#{1,3} ' 015_fraggfn-6td3-baseline.md)",
-      "Bash(grep -nE '^#{1,3} ' 018_synthesizability-metric-aizynthfinder.md)"
+      "Bash(grep -nE '^#{1,3} ' 018_synthesizability-metric-aizynthfinder.md)",
+      "Bash(which pdftotext *)",
+      "Bash(python3 -c \"import fitz; print\\('pymupdf', fitz.__doc__\\)\")",
+      "Bash(python3 -c \"import pdfminer; print\\('pdfminer'\\)\")",
+      "Bash(xargs basename -a)",
+      "Bash(sinfo -o \"%.14P %.6D %.14F %.10l\")",
+      "Bash(bash -n experiments/fixed_reward/submit_aizynth_fourway.sh)"
     ]
   }
 }

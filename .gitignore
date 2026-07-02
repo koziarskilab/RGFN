@@ -230,3 +230,5 @@ experiments/**/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_*/
 # committed seed + result CSVs sit directly in a run dir (override the global *.csv ignore)
 !experiments/**/seed_*.csv
 !experiments/**/*_results.csv
+
+oracle/drd2_current.pkl

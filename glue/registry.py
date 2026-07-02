@@ -15,6 +15,7 @@ imported on the startup path.
 # Importing the subpackages triggers registration of everything they expose.
 from glue import active_learning  # noqa: F401
 from glue import datasets  # noqa: F401
+from glue import fixed_reward  # noqa: F401
 from glue import metrics  # noqa: F401
 from glue import oracles  # noqa: F401
 from glue import proxies  # noqa: F401

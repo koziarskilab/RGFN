@@ -1,0 +1,33 @@
+# SCENT FIXED-REWARD baseline on the DRD2 surrogate reward generator (RGFN paper's 3rd
+# proxy). Same as scent_seh_fixed.gin but the reward is the DRD2 activity oracle: trains
+# SCENT's cost-guided reaction-GFN ONCE against the frozen DRD2 oracle (SCENT's clone ships a
+# generic @TDCProxy; the `scent` env has PyTDC, so `tdc.Oracle("DRD2")` is the SAME model
+# RGFN's fixed_reward_drd2.gin uses). Synthesizable -> has_route=1. β matched to RGFN's DRD2.
+#
+# Parsed with CWD = the SCENT clone (external/scent); TDC reads external/scent/oracle/
+# drd2_current.pkl (pre-staged). Run (repo root, scent env; ingest shells to rgfn env):
+#   conda run -n scent python validation/generators/scent/run_scent_fixed.py \
+#       --cfg validation/configs/scent_drd2_fixed.gin --root-dir $SCRATCH/rgfn_runs/experiments
+
+include 'configs/scent_base.gin'           # rgfn_base + cost guidance + exploitation penalty + dynamic library
+include 'configs/envs/settings/small.gin'  # SMALL building blocks + shipped costs + template yields
+include 'configs/proxies/target/drd2.gin'  # SCENT's frozen @TDCProxy(oracle_name='DRD2') as %train_proxy
+
+beta = 48                                   # == RGFN fixed_reward_drd2.gin beta
+
+WandbLogger.mode = 'offline'
+
+Trainer.n_iterations = 5000
+Trainer.valid_every_n_iterations = 100000000
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+ScentFixedRewardRun.trainer = %trainer
+ScentFixedRewardRun.reward_generator = %train_proxy
+ScentFixedRewardRun.n_samples = 1000
+ScentFixedRewardRun.sample_oversample = 4.0
+ScentFixedRewardRun.top_k = 100
+ScentFixedRewardRun.system = 'drd2'
+ScentFixedRewardRun.generator_name = 'scent'
+ScentFixedRewardRun.reward_name = 'drd2'
+ScentFixedRewardRun.score_units = 'drd2_tdc_activity (higher is better; 0-1)'
