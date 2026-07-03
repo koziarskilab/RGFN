@@ -8,6 +8,8 @@ by subclassing :class:`HubSelector` and registering it in ``glue.analysis.regist
 
 Strategies provided:
     highest_flow            most sampled trajectories through the hub (the flow signal).
+    highest_tb_flow         highest Trajectory-Balance flow estimate F(h)=R(x)P_B/P_F
+                            (requires glue.analysis.tb_flow.annotate_tb_flow first).
     most_modes              most distinct Tanimoto modes reachable one reaction away
                             (raw branching diversity of the diverging step).
     highest_expected_reward flow × mean child reward, or total reward mass — hubs that
@@ -60,6 +62,22 @@ class HighestFlowHubSelector(HubSelector):
 
     def score(self, hub: Hub, graph: HubGraph) -> float:
         return float(hub.visit_count)
+
+
+class HighestTBFlowHubSelector(HubSelector):
+    """Top hubs by the balance-based flow estimate ``F(h) = R(x)·P_B(h|x)/P_F(x|h)``.
+
+    The reward-and-backward-policy view of flow, read off the Trajectory Balance
+    condition (``glue.analysis.tb_flow``). Requires ``annotate_tb_flow`` to have run on
+    the graph first (the sweep does this automatically when this selector is used).
+    Ranks on ``tb_flow_log`` (the log — ``F(h)`` itself can overflow float). Hubs without
+    a TB estimate sort last.
+    """
+
+    name = "highest_tb_flow"
+
+    def score(self, hub: Hub, graph: HubGraph) -> float:
+        return hub.tb_flow_log if hub.tb_flow_log is not None else float("-inf")
 
 
 class MostModesHubSelector(HubSelector):

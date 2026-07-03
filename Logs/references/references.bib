@@ -26,6 +26,16 @@
   note      = {THE paper this fork builds on. Reaction-DAG action space; synthesizable molecules.}
 }
 
+@inproceedings{malkin2022trajectorybalance,
+  title     = {Trajectory Balance: Improved Credit Assignment in {GFlowNets}},
+  author    = {Malkin, Nikolay and Jain, Moksh and Bengio, Emmanuel and Sun, Chen and Bengio, Yoshua},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+  eprint    = {2201.13259},
+  archivePrefix = {arXiv},
+  note      = {The training objective RGFN optimizes (configs/objectives/trajectory_balance.gin): learns P_F, P_B and a single global Z, but no per-state flow F(s). Basis for the balance-based flow estimate F(h)=R(x)P_B(h|x)/P_F(x|h) in glue/analysis/tb_flow.py.}
+}
+
 % --- Baselines: synthesis-aware generators we compare against ---
 
 @misc{seo2024rxnflow,

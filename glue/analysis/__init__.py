@@ -33,6 +33,7 @@ from glue.analysis.hub_selectors import (
     HighestChildRewardHubSelector,
     HighestExpectedRewardHubSelector,
     HighestFlowHubSelector,
+    HighestTBFlowHubSelector,
     HubSelector,
     MostModesHubSelector,
 )
@@ -46,9 +47,10 @@ from glue.analysis.mol_selectors import (
     TopKRewardSelector,
 )
 from glue.analysis.pareto import aggregate_trials, pareto_front
-from glue.analysis.plot import plot_pareto, plot_sweep_fronts
+from glue.analysis.plot import plot_flow_agreement, plot_pareto, plot_sweep_fronts
 from glue.analysis.select import run_selection
 from glue.analysis.sweep import SweepRunner, SweepSpec
+from glue.analysis.tb_flow import annotate_tb_flow, flow_agreement
 
 __all__ = [
     "TrainedGFN",
@@ -61,6 +63,7 @@ __all__ = [
     "EnumerativeExpander",
     "HubSelector",
     "HighestFlowHubSelector",
+    "HighestTBFlowHubSelector",
     "MostModesHubSelector",
     "HighestExpectedRewardHubSelector",
     "HighestChildRewardHubSelector",
@@ -80,4 +83,7 @@ __all__ = [
     "aggregate_trials",
     "plot_pareto",
     "plot_sweep_fronts",
+    "plot_flow_agreement",
+    "annotate_tb_flow",
+    "flow_agreement",
 ]

@@ -63,6 +63,12 @@ def main() -> None:
     p.add_argument("--yield_adjusted", action="store_true")
     p.add_argument("--write_plans", action="store_true", help="also dump each plan's dataset")
     p.add_argument("--no_plots", action="store_true", help="skip the Pareto-front PNGs")
+    p.add_argument(
+        "--compute_tb_flow",
+        action="store_true",
+        help="also annotate hubs with the balance-based TB flow + write the agreement diagnostic "
+        "(auto-enabled if a hub selector is 'highest_tb_flow')",
+    )
     p.add_argument("--device", default=None)
     args = p.parse_args()
 
@@ -75,6 +81,8 @@ def main() -> None:
             spec = SweepSpec.from_dict(json.load(fh))
         if args.no_plots:
             spec.make_plots = False
+        if args.compute_tb_flow:
+            spec.compute_tb_flow = True
     else:
         expander = (args.expander, json.loads(args.expander_kwargs) if args.expander_kwargs else {})
         spec = SweepSpec(
@@ -92,6 +100,7 @@ def main() -> None:
             yield_adjusted=args.yield_adjusted,
             write_plans=args.write_plans,
             make_plots=not args.no_plots,
+            compute_tb_flow=args.compute_tb_flow,
         )
 
     print(f"[analyze_gfn] loading {args.checkpoint_path}\n  with {args.cfg}", flush=True)

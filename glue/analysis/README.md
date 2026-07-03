@@ -33,14 +33,27 @@ penultimate intermediate — is the natural late-stage-diversification point for
 `x`. Making that intermediate once and splitting it into parallel final steps is exactly
 what a chemist would batch.
 
-## Flow
+## Flow — two estimators
 
 The configs train with **Trajectory Balance**, which parameterizes `logZ + P_F + P_B`
-but **not** per-state flows `F(s)`. So a hub's flow is estimated by its **forward-sampling
-visit count** — an unbiased Monte-Carlo estimate of `F(hub)/Z`, naturally reward-weighted
-because the trained policy samples ∝ reward. (A `ModelStateFlow` reader for SubTB-trained
-models can be added later; the exact per-child allocation `P_F(child|hub)` is also
-available from the forward policy.)
+but **not** per-state flows `F(s)`. We recover the flow through a hub two independent ways:
+
+1. **Sampling flow (default, `hub_graph.py`)** — a hub's **forward-sampling visit count**,
+   an unbiased Monte-Carlo estimate of `F(hub)/Z` (the `Z·∏P_F` side of the TB loss). Free;
+   only needs the sampled trajectories.
+2. **Balance flow (`tb_flow.py`)** — read off the TB condition:
+   `F(h) = R(x)·P_B(h|x)/P_F(x|h)`, averaged over the trajectories through `h` (the `R·∏P_B`
+   side of the TB loss). Exact when the model perfectly satisfies TB
+   (`[malkin2022trajectorybalance]`, Prop. 1); lower-variance than visit-counting near
+   convergence. Enable with
+   `annotate_tb_flow(graph, traj, gfn)` or `--compute_tb_flow` / the `highest_tb_flow`
+   selector; needs one forward+backward policy pass per trial.
+
+Because these are the two sides of the same loss, their per-hub agreement is a
+**training-quality diagnostic**: `flow_agreement(graph, gfn)` correlates them and the sweep
+writes `flow_agreement.csv` + `flow_agreement.png` (scatter with the `y=x` line). (A
+`ModelStateFlow` reader for SubTB-trained models can still be added; the exact per-child
+allocation `P_F(child|hub)` is also available from the forward policy.)
 
 ## The pipeline (each stage is one pluggable piece)
 
@@ -48,9 +61,10 @@ available from the forward policy.)
 |---|---|---|
 | load | `loader.py` | `TrainedGFN.load(cfg, ckpt)` → env, forward policy, proxy, sampler |
 | sample | `loader.py` | `sample_trajectories(n)` — forward samples with rewards attached |
-| hub graph | `hub_graph.py` | `build_hub_graph(traj)` — intermediates, **flow**, observed children, routes |
+| hub graph | `hub_graph.py` | `build_hub_graph(traj)` — intermediates, **flow** (visit count), observed children, routes |
+| balance flow | `tb_flow.py` | `annotate_tb_flow` — `F(h)=R(x)P_B/P_F`; `flow_agreement` — sampling-vs-balance diagnostic |
 | expand children | `expanders.py` | `observed` (cheap, sampled) or `enumerative` (exhaustive, env-driven, proxy-scored) |
-| pick hubs | `hub_selectors.py` | `highest_flow`, `most_modes`, `highest_expected_reward`, `highest_child_reward` (+ `DiverseHubSelector`) |
+| pick hubs | `hub_selectors.py` | `highest_flow`, `highest_tb_flow`, `most_modes`, `highest_expected_reward`, `highest_child_reward` (+ `DiverseHubSelector`) |
 | pick molecules | `mol_selectors.py` | `top_k_reward`, `top_k_reward_diverse`, `scaffold_diverse_k`, `random_k` |
 | assemble | `batch_plan.py` | `BatchPlan` = `m` lanes → standard `CandidateDataset` + `lanes.csv` |
 | measure | `metrics.py` | diversity / concurrency / cost / reward per plan |

@@ -69,6 +69,12 @@ def plan_metrics(
     lane_divs = [d for d in lane_divs if d == d]  # drop NaN
     m["within_lane_diversity_mean"] = mean(lane_divs) if lane_divs else float("nan")
 
+    # --- selected-hub flow signals (both estimators, head-to-head) --------------------
+    visits = [lane.hub.visit_count for lane in plan.lanes]
+    m["mean_hub_visit_count"] = mean(visits) if visits else float("nan")
+    tb_logs = [lane.hub.tb_flow_log for lane in plan.lanes if lane.hub.tb_flow_log is not None]
+    m["mean_hub_tb_flow_log"] = mean(tb_logs) if tb_logs else float("nan")
+
     # --- reward summary (oriented "best") --------------------------------------------
     if valid_scores:
         m["reward_mean"] = mean(valid_scores)

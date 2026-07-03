@@ -285,6 +285,64 @@ def plot_sweep_fronts(results_csv, out_dir=None) -> List[Path]:
     return written
 
 
+def plot_flow_agreement(agreement: Dict[str, Any], out_path) -> Path:
+    """Scatter the two flow estimates against each other — a training-quality diagnostic.
+
+    Takes the dict from ``glue.analysis.tb_flow.flow_agreement`` (log sampling flow vs log
+    TB flow, plus correlations) and draws a scatter with the ``y=x`` reference. Points on
+    the diagonal ⇒ the sampling (``Z·∏P_F``) and reward/backward (``R·∏P_B``) views of the
+    flow agree — i.e. the model satisfies Trajectory Balance well around those hubs.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    out_path = Path(out_path)
+    xs = [float(v) for v in agreement.get("x_log_visit_flow", [])]
+    ys = [float(v) for v in agreement.get("y_log_tb_flow", [])]
+    if not xs:
+        raise ValueError("no hubs with both flow estimates to plot")
+
+    fig, ax = plt.subplots(figsize=(6.2, 6.0), dpi=140)
+    ax.set_axisbelow(True)
+    ax.grid(True, color=_GRID_INK, linewidth=0.8)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+
+    ax.scatter(xs, ys, s=42, c=_OKABE_ITO[1], edgecolors="white", linewidths=0.6, zorder=3)
+    lo, hi = min(xs + ys), max(xs + ys)
+    ax.plot(
+        [lo, hi],
+        [lo, hi],
+        color=_FRONT_INK,
+        linewidth=1.6,
+        linestyle="--",
+        zorder=2,
+        label="y = x (perfect balance)",
+    )
+
+    aligned = agreement.get("aligned_to_fz")
+    ax.set_xlabel("log sampling flow  (visit_count / N ≈ F/Z)", fontsize=11)
+    ax.set_ylabel(
+        "log TB flow" + ("  (F/Z, via −logZ)" if aligned else "  (F, absolute)"), fontsize=11
+    )
+    pear, spear = agreement.get("pearson_log", float("nan")), agreement.get(
+        "spearman", float("nan")
+    )
+    ax.set_title(
+        f"Flow agreement: sampling vs Trajectory-Balance\n"
+        f"n={agreement.get('n_hubs')} hubs · pearson(log)={pear:.3f} · spearman={spear:.3f}",
+        fontsize=11,
+    )
+    ax.legend(loc="upper left", fontsize=8, frameon=False)
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
 def _f(row: Dict[str, Any], col: Optional[str]):
     if not col:
         return None

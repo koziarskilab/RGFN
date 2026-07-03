@@ -18,6 +18,7 @@ from glue.analysis.hub_selectors import (
     HighestChildRewardHubSelector,
     HighestExpectedRewardHubSelector,
     HighestFlowHubSelector,
+    HighestTBFlowHubSelector,
     HubSelector,
     MostModesHubSelector,
 )
@@ -31,6 +32,7 @@ from glue.analysis.mol_selectors import (
 
 HUB_SELECTORS: Dict[str, type] = {
     HighestFlowHubSelector.name: HighestFlowHubSelector,
+    HighestTBFlowHubSelector.name: HighestTBFlowHubSelector,
     MostModesHubSelector.name: MostModesHubSelector,
     HighestExpectedRewardHubSelector.name: HighestExpectedRewardHubSelector,
     HighestChildRewardHubSelector.name: HighestChildRewardHubSelector,

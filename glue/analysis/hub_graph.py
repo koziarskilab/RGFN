@@ -19,9 +19,9 @@ This module reduces a batch of sampled ``Trajectories`` to a :class:`HubGraph`:
 * one :class:`Hub` per distinct intermediate ``(smiles, num_reactions)``,
 * its **flow** = how many sampled trajectories passed through it (an unbiased Monte-
   Carlo estimate of the marginal state flow ``F(hub)/Z``; the configs train with
-  **Trajectory Balance**, which does *not* parameterize per-state flows, so visit
-  frequency is the principled, model-agnostic flow signal — see
-  ``docs/`` / ``ARCHITECTURE``),
+  **Trajectory Balance** (``[malkin2022trajectorybalance]``), which does *not*
+  parameterize per-state flows, so visit frequency is the principled, model-agnostic
+  flow signal — ``glue.analysis.tb_flow`` adds the complementary balance-based estimate),
 * its **observed children** = the terminal molecules seen one reaction downstream
   (the flow-realized diversification set), each with the proxy score the sampler
   attached and the full synthesis route.
@@ -68,6 +68,12 @@ class Hub:
     state: Optional[ReactionStateA] = None  # the real state object (used by EnumerativeExpander)
     # observed 1-reaction-away terminal children, de-duplicated by SMILES (best score kept).
     observed_children: Dict[str, Child] = field(default_factory=dict)
+    # Trajectory-balance flow estimate F(h) = mean over trajectories through h of
+    # R(x)*P_B(h|x)/P_F(x|h) (see glue.analysis.tb_flow). Populated only if annotated;
+    # ``tb_flow_log`` is the log (the safe field to rank on — F(h) can overflow float).
+    tb_flow: Optional[float] = None
+    tb_flow_log: Optional[float] = None
+    tb_flow_n: int = 0  # number of trajectory estimates averaged
 
     @property
     def key(self) -> HubKey:

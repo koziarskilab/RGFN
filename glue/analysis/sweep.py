@@ -53,6 +53,7 @@ class SweepSpec:
     yield_adjusted: bool = False
     write_plans: bool = False
     make_plots: bool = True
+    compute_tb_flow: bool = False  # annotate hubs with balance-based flow (auto-on if used)
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "SweepSpec":
@@ -91,6 +92,7 @@ class SweepSpec:
             yield_adjusted=bool(d.get("yield_adjusted", False)),
             write_plans=bool(d.get("write_plans", False)),
             make_plots=bool(d.get("make_plots", True)),
+            compute_tb_flow=bool(d.get("compute_tb_flow", False)),
         )
 
 
@@ -110,15 +112,22 @@ class SweepRunner:
         combos = list(
             itertools.product(spec.hub_selectors, spec.mol_selectors, spec.m_values, spec.k_values)
         )
+        # TB flow is needed if asked for, or if any selector ranks by it.
+        need_tb = spec.compute_tb_flow or any(
+            hs[0] == "highest_tb_flow" for hs in spec.hub_selectors
+        )
         # One expander for the whole sweep: enumeration is deterministic per hub key, so
         # its cache is reused across every combo and trial (a hub selected by multiple
         # strategies is enumerated once).
         expander = registry.build_expander(spec.expander[0], spec.expander[1])
         print(
             f"[sweep] {spec.n_trials} trials × {len(combos)} configs "
-            f"= {spec.n_trials * len(combos)} rows; expander={spec.expander[0]}",
+            f"= {spec.n_trials * len(combos)} rows; expander={spec.expander[0]}"
+            f"{'; tb_flow on' if need_tb else ''}",
             flush=True,
         )
+        agreement_rows: List[Dict[str, Any]] = []
+        first_agreement: Optional[Dict[str, Any]] = None
         for trial in range(spec.n_trials):
             seed = spec.base_seed + trial
             traj = self.gfn.sample_trajectories(spec.sample_size, spec.batch_size, seed=seed)
@@ -129,6 +138,28 @@ class SweepRunner:
                 f"{summary['n_hubs']} hubs, {summary['total_observed_children']} observed children",
                 flush=True,
             )
+            if need_tb:
+                from glue.analysis.tb_flow import annotate_tb_flow, flow_agreement
+
+                annotate_tb_flow(graph, traj, self.gfn)
+                agree = flow_agreement(graph, self.gfn)
+                print(
+                    f"[sweep] trial {trial}: flow agreement (visit vs TB) over {agree['n_hubs']} hubs "
+                    f"— pearson(log)={agree['pearson_log']:.3f} spearman={agree['spearman']:.3f}",
+                    flush=True,
+                )
+                agreement_rows.append(
+                    {
+                        "trial": trial,
+                        "seed": seed,
+                        "n_hubs": agree["n_hubs"],
+                        "pearson_log": agree["pearson_log"],
+                        "spearman": agree["spearman"],
+                        "log_Z": agree["log_Z"],
+                    }
+                )
+                if first_agreement is None:
+                    first_agreement = agree
             for hs, ms, m, k in combos:
                 hub_selector = registry.build_hub_selector(hs[0], hs[1])
                 mol_selector = registry.build_mol_selector(ms[0], ms[1])
@@ -167,10 +198,32 @@ class SweepRunner:
                     )
         self._write_results(rows)
         self._write_manifest(rows, combos)
+        if agreement_rows:
+            self._write_agreement(agreement_rows)
         print(f"[sweep] done → {self.out_dir/'results.csv'} ({len(rows)} rows)", flush=True)
         if self.spec.make_plots:
             self._make_plots()
+            if first_agreement is not None:
+                self._make_flow_agreement_plot(first_agreement)
         return rows
+
+    def _write_agreement(self, agreement_rows: List[Dict[str, Any]]) -> None:
+        with open(self.out_dir / "flow_agreement.csv", "w", newline="") as fh:
+            w = csv.DictWriter(
+                fh, fieldnames=["trial", "seed", "n_hubs", "pearson_log", "spearman", "log_Z"]
+            )
+            w.writeheader()
+            w.writerows(agreement_rows)
+
+    def _make_flow_agreement_plot(self, agreement: Dict[str, Any]) -> None:
+        """Best-effort scatter of sampling flow vs TB flow (training-quality diagnostic)."""
+        try:
+            from glue.analysis.plot import plot_flow_agreement
+
+            p = plot_flow_agreement(agreement, self.out_dir / "flow_agreement.png")
+            print(f"[sweep] plot → {p}", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[sweep] WARNING flow-agreement plot skipped: {exc}", flush=True)
 
     def _make_plots(self) -> None:
         """Best-effort Pareto PNGs (diversity vs concurrency / cost). Never fatal —

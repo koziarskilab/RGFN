@@ -253,7 +253,12 @@
       "Bash(timeout 120 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<PY *)",
       "Bash(timeout 1500 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow,most_modes   --mol_selectors top_k_reward,top_k_reward_diverse   --m_values 2,4,8 --k_values 5,15,30   --n_trials 2 --sample_size 600 --batch_size 300   --expander enumerative --expander_kwargs '\\\\''{\"max_fragments_per_pattern\": 25, \"max_children\": 300}'\\\\''   --out '\\\\''__TRACKED_VAR__/analysis_sweep_enum'\\\\''')",
       "Bash(timeout 100 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<PY *)",
-      "Bash(timeout 60 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python '\\\\''__TRACKED_VAR__/../check_pareto.py'\\\\'' '\\\\''__TRACKED_VAR__/results.csv'\\\\'' 2>/dev/null | sed -n '\\\\''1,3p;/front/,$p'\\\\''')"
+      "Bash(timeout 60 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python '\\\\''__TRACKED_VAR__/../check_pareto.py'\\\\'' '\\\\''__TRACKED_VAR__/results.csv'\\\\'' 2>/dev/null | sed -n '\\\\''1,3p;/front/,$p'\\\\''')",
+      "Bash(timeout 120 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<'\\\\''PY'\\\\'' *)",
+      "Bash(sed -n 1,40p __TRACKED_VAR__/tb_text.txt)",
+      "Bash(sed -n '/===== PAGE 2 =====/,/===== PAGE 3 =====/p' __TRACKED_VAR__/tb_text.txt)",
+      "Bash(sed -n '/===== PAGE 3 =====/,/===== PAGE 4 =====/p' __TRACKED_VAR__/tb_text.txt)",
+      "Bash(timeout 1200 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow,highest_tb_flow   --mol_selectors top_k_reward_diverse   --m_values 8 --k_values 15   --n_trials 2 --sample_size 800 --batch_size 400   --expander observed --compute_tb_flow   --out '\\\\''__TRACKED_VAR__/analysis_tbflow'\\\\''')"
     ]
   }
 }
