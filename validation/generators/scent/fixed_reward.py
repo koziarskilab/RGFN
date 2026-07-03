@@ -19,7 +19,7 @@ import csv
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import gin
 
@@ -115,15 +115,17 @@ class ScentFixedRewardRun:
         print(f"[SCENT-FR] sampled {len(smiles)} unique valid candidates", flush=True)
 
         # 3. score with the reward generator itself (its proxy value = the score column).
-        scores = self._score(states)
+        #    A docking reward generator (@DockingBridgeProxy) also exposes the raw Vina/dvina
+        #    as a 'raw_score' component -> kept as a provenance column (matches RGFN/baselines).
+        scores, raws = self._score(states)
 
         # 4. write pairs.csv + routes.jsonl, emit standard dataset via the rgfn env.
         pairs_path = out_dir / "pairs.csv"
         with open(pairs_path, "w", newline="") as fh:
             w = csv.writer(fh)
-            w.writerow(["smiles", "score"])
-            for smi, sc in zip(smiles, scores):
-                w.writerow([smi, sc])
+            w.writerow(["smiles", "score"] + (["raw_score"] if raws is not None else []))
+            for i, (smi, sc) in enumerate(zip(smiles, scores)):
+                w.writerow([smi, sc] + ([raws[i]] if raws is not None else []))
         routes_path = out_dir / "routes.jsonl"
         with open(routes_path, "w") as fh:
             for smi, route in zip(smiles, routes):
@@ -199,12 +201,19 @@ class ScentFixedRewardRun:
                     return smiles, routes, states
         return smiles, routes, states
 
-    def _score(self, states: List) -> List[float]:
-        """Reward generator's own value per terminal state (the score column)."""
+    def _score(self, states: List) -> Tuple[List[float], Optional[List[float]]]:
+        """Reward generator's own value per terminal state (the score column), plus the
+        raw docking score if the reward generator exposes a ``raw_score`` component
+        (docking); ``(scores, None)`` for a plain proxy (sEH/DRD2)."""
         if not states:
-            return []
+            return [], None
         output = self.reward_generator.compute_proxy_output(states)
-        return [float(v) for v in output.value.detach().cpu().reshape(-1).tolist()]
+        scores = [float(v) for v in output.value.detach().cpu().reshape(-1).tolist()]
+        raws: Optional[List[float]] = None
+        comps = getattr(output, "components", None)
+        if comps and "raw_score" in comps:
+            raws = [float(v) for v in comps["raw_score"].detach().cpu().reshape(-1).tolist()]
+        return scores, raws
 
     @staticmethod
     def _write_top_k(path: Path, rows: List[Tuple[str, float]]) -> None:

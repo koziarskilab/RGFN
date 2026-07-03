@@ -186,3 +186,22 @@ class DockingSEHOracle(GlueOracle):
                 n_cpu=self.n_cpu,
             )
         return self._proxy
+
+
+@gin.configurable()
+class DockingClpPOracle(DockingSEHOracle):
+    """Single-target GPU-docking oracle for **ClpP** (caseinolytic protease P).
+
+    Identical machinery to :class:`DockingSEHOracle` — a thin wrapper over upstream
+    ``DockingMoleculeProxy`` (QuickVina2-GPU) returning the raw Vina binding energy
+    (more negative = better, so ``higher_is_better = False``) — but against the ClpP
+    receptor. The box centre/size + prepared ``data/targets/ClpP.pdbqt`` come from the
+    upstream receptor tables (``docking_proxy.RECEPTOR_CENTERS['ClpP']``), so this is a
+    one-line target swap. It is one of the RGFN paper's benchmark docking targets
+    (``configs/rgfn_clpp_docking.gin``).
+    """
+
+    name = "docking_clpp"
+
+    def __init__(self, receptor_name: str = "ClpP", **kwargs):
+        super().__init__(receptor_name=receptor_name, **kwargs)

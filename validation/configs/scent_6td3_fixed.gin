@@ -1,0 +1,41 @@
+# SCENT FIXED-REWARD baseline on the 6TD3 two-tier docking DIFFERENTIAL — SHARED SMALL library.
+#
+# Per-step docking-in-the-loop for the cost-aware synthesizable peer: train SCENT's cost-guided
+# reaction-GFN ONCE with the 6TD3 differential (QV2-GPU pose-gen + gnina CNN pose-select +
+# two-tier Vina) called every step via @DockingBridgeProxy (shells to scripts/score_batch.py
+# under the rgfn env). SCENT natively builds from the SMALL library. Routes -> has_route=1.
+# No AL loop, no oracle. Matches RGFN's configs/glue/fixed_reward_6td3.gin (beta=4, 400 iters).
+#
+# Run (repo root, scent env; docking libs exported for the rgfn subprocess):
+#   conda run -n scent python validation/generators/scent/run_scent_fixed.py \
+#       --cfg validation/configs/scent_6td3_fixed.gin --root-dir $SCRATCH/rgfn_runs/experiments
+
+include 'configs/scent_base.gin'
+include 'configs/envs/settings/small.gin'
+
+proxy/gin.singleton.constructor = @DockingBridgeProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+DockingBridgeProxy.oracle = 'docking_6td3_gpu'
+DockingBridgeProxy.norm = 1.0
+
+beta = 4
+WandbLogger.mode = 'offline'
+
+# CRITICAL: drop @TanimotoSimilarityModes — it re-scores %train_proxy (would re-dock).
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate()]
+
+Trainer.n_iterations = 400
+Trainer.valid_every_n_iterations = 100000000
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+ScentFixedRewardRun.trainer = %trainer
+ScentFixedRewardRun.reward_generator = %train_proxy
+ScentFixedRewardRun.n_samples = 200
+ScentFixedRewardRun.sample_oversample = 6.0
+ScentFixedRewardRun.top_k = 100
+ScentFixedRewardRun.system = '6td3'
+ScentFixedRewardRun.generator_name = 'scent'
+ScentFixedRewardRun.reward_name = '6td3_diff'
+ScentFixedRewardRun.score_units = 'clip(-dvina) reward (higher is better; raw dvina in raw_score column)'

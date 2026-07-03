@@ -236,7 +236,24 @@
       "Bash(scancel 69613)",
       "Bash(scancel 69615)",
       "Bash(sacct -j 69606,69607,69608,69609,69610,69611,69612 --format=JobID,JobName%20,State,Elapsed)",
-      "Bash(sacct -j 69616,69614,69608,69606 --format=JobID,JobName%22,State,Elapsed,End)"
+      "Bash(sacct -j 69616,69614,69608,69606 --format=JobID,JobName%22,State,Elapsed,End)",
+      "Bash(:)",
+      "Bash(grep -n \"cost\\\\|price\\\\|\\\\$\\\\|USD\\\\|per_\" docs/CHEM_LIBRARY_FORMAT.md)",
+      "Bash(timeout 180 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python -c \"import torch,rdkit,gin,numpy; import rgfn; import glue; print\\(\\\\\"IMPORT OK torch\\\\\",torch.__version__,\\\\\"cuda\\\\\",torch.cuda.is_available\\(\\)\\)\"')",
+      "Bash(timeout 900 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow,most_modes,highest_expected_reward   --mol_selectors top_k_reward,top_k_reward_diverse   --m_values 4,8 --k_values 5,10   --n_trials 2 --sample_size 500 --batch_size 250   --expander observed   --out '\\\\''__TRACKED_VAR__/analysis_smoke_observed'\\\\'' --write_plans')",
+      "Bash(timeout 120 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python -c \" *)",
+      "Bash([ -f \"$SP/results.csv\" ])",
+      "Bash(timeout 120 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python '\\\\''__TRACKED_VAR__/check_pareto.py'\\\\'' '\\\\''__TRACKED_VAR__/analysis_smoke_observed/results.csv'\\\\''')",
+      "Bash(timeout 900 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow   --mol_selectors top_k_reward,top_k_reward_diverse   --m_values 3 --k_values 25   --n_trials 1 --sample_size 400 --batch_size 200   --expander enumerative --expander_kwargs '\\\\''{\"max_fragments_per_pattern\": 25, \"max_children\": 300}'\\\\''   --out '\\\\''__TRACKED_VAR__/analysis_smoke_enum'\\\\''')",
+      "Bash(timeout 60 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<PY *)",
+      "Bash(timeout 90 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python -c \"import glue.analysis; print\\(\\\\\"reimport OK\\\\\"\\)\"')",
+      "Bash(timeout 900 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow   --mol_selectors top_k_reward,top_k_reward_diverse,scaffold_diverse_k   --m_values 3 --k_values 20   --n_trials 1 --sample_size 400 --batch_size 200   --expander enumerative --expander_kwargs '\\\\''{\"max_fragments_per_pattern\": 25, \"max_children\": 300}'\\\\''   --out '\\\\''__TRACKED_VAR__/analysis_smoke_enum2'\\\\''')",
+      "Skill(dataviz)",
+      "Bash(timeout 90 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python -c \"import matplotlib; print\\(\\\\\"matplotlib\\\\\", matplotlib.__version__\\)\"')",
+      "Bash(timeout 120 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<PY *)",
+      "Bash(timeout 1500 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python scripts/analyze_gfn.py   --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin   --checkpoint_path '\\\\''__TRACKED_VAR__'\\\\''   --library data/libraries/glue_standard_v1   --hub_selectors highest_flow,most_modes   --mol_selectors top_k_reward,top_k_reward_diverse   --m_values 2,4,8 --k_values 5,15,30   --n_trials 2 --sample_size 600 --batch_size 300   --expander enumerative --expander_kwargs '\\\\''{\"max_fragments_per_pattern\": 25, \"max_children\": 300}'\\\\''   --out '\\\\''__TRACKED_VAR__/analysis_sweep_enum'\\\\''')",
+      "Bash(timeout 100 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python - <<PY *)",
+      "Bash(timeout 60 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python '\\\\''__TRACKED_VAR__/../check_pareto.py'\\\\'' '\\\\''__TRACKED_VAR__/results.csv'\\\\'' 2>/dev/null | sed -n '\\\\''1,3p;/front/,$p'\\\\''')"
     ]
   }
 }

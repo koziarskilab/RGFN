@@ -1,0 +1,42 @@
+# RxnFlow FIXED-REWARD baseline on the 6TD3 two-tier docking DIFFERENTIAL — SHARED SMALL library.
+#
+# Per-step docking-in-the-loop for the synthesizable peer: each training step shells to
+# `conda run -n rgfn scripts/score_batch.py --oracle docking_6td3_gpu` via DockingBridgeReward,
+# training RxnFlow on clip(-dvina). RxnFlow builds from the shared standard set
+# (data/models/rxnflow_env_stdlib = glue_standard_v1). Routes -> has_route=1. No AL loop, no
+# oracle. Matches RGFN's fixed_reward_6td3.gin (beta=4, 400 iters).
+#
+# Run (repo root, rxnflow env; docking libs exported for the rgfn subprocess):
+#   conda run -n rxnflow python validation/generators/rxnflow/run_rxnflow_fixed.py \
+#       --cfg validation/configs/rxnflow_6td3_docking_fixed.yaml --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/rxnflow_6td3
+  root_dir: experiments
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 400
+  n_samples: 200
+  sample_oversample: 6.0
+  top_k: 100
+  beta: 4
+  system: 6td3
+  reward_name: 6td3_diff
+  score_units: "clip(-dvina) reward (higher is better; raw dvina in raw_score column)"
+
+reward:
+  type: docking
+  oracle: docking_6td3_gpu
+  norm: 1.0
+  clip: 10.0
+
+rxnflow:
+  env_dir: data/models/rxnflow_env_stdlib  # SHARED library (glue_standard_v1 baked)
+  max_reactions: 4
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 10
+  action_sampling_ratio: 0.01

@@ -949,3 +949,76 @@ Verified: the completed run freed ~39.7 GB before docking each round and added ~
 molecules/round; docking fell to ~1 min/round (<2% of the loop) vs entry-012's ~31
 min (33%). See `Logs/014`. All changes are login-node smoke-tested; the full loop is
 now confirmed on a real 3-round Balam run.
+
+## 2026-07-03 — Fixed-reward docking matrix: per-step docking for every generator (Logs/021)
+
+Extended the fixed-reward benchmark to run **per-step GPU docking as a fixed reward for
+ALL FOUR generators** (previously RGFN-only), on the shared SMALL library. New structure:
+
+- **`glue/proxies/oracle_reward_proxy.OracleRewardProxy`** — the missing generic adapter
+  turning any `glue.oracles.GlueOracle` into an in-loop GFN reward (`clip(-raw/norm)` +
+  per-step `torch.cuda.empty_cache()` so a GPU docking oracle isn't starved by torch during
+  training — the Logs/014 fix moved into the reward path, the guard the raw upstream
+  `DockingMoleculeProxy` lacks). Registered in `glue/proxies/__init__.py`. Symmetric third
+  case next to `LearnedGlueProxy` (AL surrogate) and `ExampleGlueProxy` (template).
+- **`glue/oracles/docking_seh_oracle.DockingClpPOracle`** — one-line ClpP target subclass;
+  added to `scripts/score_batch.py` `ORACLES` as `docking_clpp`.
+- **Baseline cross-env bridge** (the "attempt baselines too" work): `DockingBridgeReward` in
+  `validation/generators/{fraggfn,rxnflow}/fixed_reward.py` + a `reward.type: docking` branch;
+  `DockingBridgeProxy` (SCENT-clone `CachedProxyBase`) in
+  `validation/generators/scent/docking_bridge_proxy.py`. Each docks a step's batch by shelling
+  to `conda run -n rgfn score_batch.py` (benchmark 69691 showed ~10-13% amortized overhead),
+  caches per canonical SMILES, `empty_cache` first. `ScentFixedRewardRun`/the FragGFN/RxnFlow
+  runners now also write the raw dvina as a `raw_score` provenance column (backward-compatible).
+- **Configs** (`configs/glue/fixed_reward_{6td3,clpp,drd2_stdlib}.gin`; `validation/configs/
+  {fraggfn,rxnflow}_{6td3,clpp}_docking_fixed.yaml`, `scent_{6td3,clpp}_fixed.gin`,
+  `rxnflow_drd2_fixed_stdlib.yaml`) — all on `glue_standard_v1`, β=4, 400 iters, and **lean
+  train_metrics dropping `TanimotoSimilarityModes`** (it re-scores `%train_proxy` every
+  eval step → would re-dock). Run-dir names follow `<gen>_<system>` so
+  `submit_aizynth_fourway.sh SYSTEM=6td3|clpp` aggregates unchanged.
+- **Orchestration**: `experiments/fixed_reward/{6td3,clpp,drd2_stdlib}/*.sh`, parameterized
+  `baseline_docking/submit_{fraggfn,rxnflow,scent}_docking.sh CONFIG`, master
+  `submit_matrix.sh`, benchmark + smoke dirs.
+
+**Verified**: benchmark (69691) + 2 end-to-end Balam smoke jobs — RGFN in-env 6TD3 (69692) and
+FragGFN cross-env (69693) both COMPLETED with conformant candidates and 100% per-step dock
+success while torch trains. Imports/gin-parse/py_compile all pass. **NOT YET**: the full matrix
+launch (awaiting user go-ahead) and a `git` commit. rgfn/ + upstream configs untouched.
+
+## 2026-07-03 — `glue/analysis/`: trained-GFN hub-based late-stage-diversification pipeline
+
+New **post-hoc analysis** subpackage for a *trained* reaction-GFN. Goal: select the `m`
+highest-value **pre-terminal hubs** (shared `ReactionStateA` intermediates) and diversify
+each in parallel via a single diverging final reaction (late-stage diversification), then
+trade **diversity** against **concurrency** (# lanes) or **cost** (shared intermediate) — the
+infrastructure to build that Pareto front, not the front itself.
+
+- **`glue/analysis/`** — modular, registry-driven, NOT gin (driven by `scripts/analyze_gfn.py`
+  + a Python/JSON `SweepSpec`), so intentionally NOT imported by `glue.registry`:
+  - `loader.TrainedGFN` — load cfg+ckpt like `infer.py` (strict=False for sampling-cache
+    buffers; imports `Trainer` so config parse resolves `Trainer.*`); sample trajectories,
+    score states, expose env/policy/proxy.
+  - `hub_graph` — `build_hub_graph(traj)` reduces trajectories to hubs; **flow = visit count**
+    (TB trains no per-state flow), observed 1-reaction children off the penultimate `SA`.
+  - `expanders` — `observed` (cheap, sampled) vs `enumerative` (env-driven exhaustive +
+    proxy-scored, per-hub-key cached, capped-with-warning).
+  - `hub_selectors` (`highest_flow`/`most_modes`/`highest_expected_reward`/`highest_child_reward`
+    + `DiverseHubSelector`), `mol_selectors` (`top_k_reward`/`top_k_reward_diverse`/
+    `scaffold_diverse_k`/`random_k`), `registry` (add a strategy = subclass + one line).
+  - `batch_plan` (→ standard `CandidateDataset` + `lanes.csv`), `metrics` (diversity/
+    concurrency/cost/reward; reuses `glue.metrics` + `glue.chemistry` cost), `cost` (route
+    pricing from `ChemLibrary`), `select`, `sweep` (trials × strategies → `results.csv`),
+    `pareto` (front extraction + trial aggregation).
+- **`scripts/analyze_gfn.py`** — generic entry point (mirrors `scripts/infer.py`).
+- **`experiments/diversification/`** — new experiment group; `seh_stdlib/` example (spec.json
+  + submit).
+
+**Verified** end-to-end on a real trained checkpoint (fixed-reward sEH proxy on
+`glue_standard_v1`, GPU): observed sweep (2 trials × 24 configs → `results.csv`), all
+selectors, both Pareto fronts (diversity-vs-concurrency and -vs-cost), enumerative expander
+(single hubs → 29/87/105 products; `top_k_reward_diverse` lifts modes 48→75), cost saving
+33% (observed) → 50% (enumerative k=25/lane). `py_compile` + imports pass. rgfn/ + upstream
+untouched. **Placement is the recommended default** (`glue/analysis/` since `glue/metrics/`
+is already post-hoc analysis `validation/` imports); the child-expansion default, cost-now,
+and home are the open forks flagged to the user — a `git mv` moves the tree if they prefer
+`validation/`. **NOT YET**: `git` commit; user sign-off on the forks.

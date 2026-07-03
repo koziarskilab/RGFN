@@ -32,7 +32,11 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from validation.generators.fraggfn.al_loop import FragGFNActiveLearningLoop, LabelStore
-from validation.generators.fraggfn.fixed_reward import DRD2FrozenReward, SEHFrozenReward
+from validation.generators.fraggfn.fixed_reward import (
+    DockingBridgeReward,
+    DRD2FrozenReward,
+    SEHFrozenReward,
+)
 from validation.generators.fraggfn.task import (
     FragGFNTrainer,
     build_constant_temperature,
@@ -135,6 +139,17 @@ def main() -> None:
             model_path=reward_c.get("model_path", "oracle/drd2_current.pkl"),
             clip=float(reward_c.get("clip", 10.0)),
         )
+    elif reward_type == "docking":
+        # Per-step GPU docking across the env boundary (score_batch.py under rgfn).
+        reward = DockingBridgeReward(
+            oracle=reward_c.get("oracle", "docking_seh"),
+            repo_root=str(_REPO_ROOT),
+            norm=float(reward_c.get("norm", 1.0)),
+            failed_score=float(reward_c.get("failed_score", 0.0)),
+            clip=float(reward_c.get("clip", 10.0)),
+            oracle_args=dict(reward_c.get("oracle_args", {})),
+            workdir=str(run_dir / "reward_bridge"),
+        )
     else:
         reward = SEHFrozenReward(
             device=device,
@@ -225,16 +240,19 @@ def main() -> None:
     batch = _sample_chunked(trainer, loop._it, n_samples, float(fr_c.get("sample_oversample", 4.0)))
     print(f"[FGFN-FR] sampled {len(batch)} unique valid candidates", flush=True)
 
-    # 3. score them with the reward generator itself (its raw value = the score column).
+    # 3. score them with the reward generator itself (its VALUE = the score column,
+    #    higher-is-better). Docking additionally exposes the raw Vina/dvina, kept as a
+    #    provenance column (matches RGFN's OracleRewardProxy 'raw_score' component).
     scores = reward.predict(batch)
+    raws = reward.raw_scores(batch) if hasattr(reward, "raw_scores") else None
 
     # 4. write pairs.csv, then emit the standard candidate dataset via the rgfn env.
     pairs_path = out_dir / "pairs.csv"
     with open(pairs_path, "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["smiles", "score"])
-        for smi, sc in zip(batch, scores):
-            w.writerow([smi, sc])
+        w.writerow(["smiles", "score"] + (["raw_score"] if raws is not None else []))
+        for i, (smi, sc) in enumerate(zip(batch, scores)):
+            w.writerow([smi, sc] + ([raws[i]] if raws is not None else []))
 
     ingest_cmd = [
         "conda",

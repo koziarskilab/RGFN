@@ -80,6 +80,7 @@ def main() -> None:
 
     # Register SCENT's gin configurables + our fixed-reward run + @Trainer (SCENT's
     # trainer/__init__ does not import trainer.py, so @Trainer registers only here).
+    import docking_bridge_proxy  # noqa: F401  (registers @DockingBridgeProxy for docking cfgs)
     import fixed_reward  # noqa: F401  (side effect: registers @ScentFixedRewardRun)
     from fixed_reward import ScentFixedRewardRun
 
@@ -92,6 +93,10 @@ def main() -> None:
         f'ScentFixedRewardRun.run_dir="{run_dir}"',
         f'ScentFixedRewardRun.repo_root="{_REPO_ROOT}"',
         f"ScentFixedRewardRun.seed={args.seed}",
+        # For docking configs (@DockingBridgeProxy): where score_batch.py resolves + writes
+        # its per-step batches. Harmless no-ops for the proxy (sEH/DRD2) configs.
+        f'DockingBridgeProxy.repo_root="{_REPO_ROOT}"',
+        f'DockingBridgeProxy.workdir="{run_dir / "reward_bridge"}"',
     ]
     gin.parse_config_files_and_bindings([str(cfg_abs)], bindings=bindings)
     print(

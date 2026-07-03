@@ -1,0 +1,46 @@
+# SCENT FIXED-REWARD baseline on ClpP GPU DOCKING (single target) — SHARED SMALL library.
+#
+# Per-step docking-in-the-loop for the cost-aware synthesizable peer: train SCENT's
+# cost-guided reaction-GFN ONCE with QuickVina2-GPU docking against ClpP called every step
+# via @DockingBridgeProxy (shells to scripts/score_batch.py under the rgfn env; SCENT's env
+# can't import glue). SCENT natively builds from the SMALL library (small.gin), so it shares
+# the action space with RGFN/RxnFlow. Routes -> has_route=1. No AL loop, no oracle. Matches
+# RGFN's configs/glue/fixed_reward_clpp_docking.gin (beta=4, 400 iters). See Logs/021.
+#
+# Run (repo root, scent env; docking libs exported for the rgfn subprocess):
+#   conda run -n scent python validation/generators/scent/run_scent_fixed.py \
+#       --cfg validation/configs/scent_clpp_fixed.gin --root-dir $SCRATCH/rgfn_runs/experiments
+
+include 'configs/scent_base.gin'           # rgfn_base + cost guidance + exploitation penalty + dynamic library
+include 'configs/envs/settings/small.gin'  # SMALL building blocks + shipped costs + template yields
+
+# Docking reward generator via the rgfn-env bridge (NO proxy-target include). repo_root +
+# workdir are bound by run_scent_fixed.py.
+proxy/gin.singleton.constructor = @DockingBridgeProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+DockingBridgeProxy.oracle = 'docking_clpp'
+DockingBridgeProxy.norm = 1.0
+
+beta = 4                                     # docking inverse temperature (matches RGFN docking)
+WandbLogger.mode = 'offline'
+
+# CRITICAL: drop @TanimotoSimilarityModes (rgfn_base default) — it re-scores %train_proxy
+# every evaluation_step, which for a docking proxy would RE-DOCK the mode cache. Keep only
+# the cheap per-step reductions that never call the proxy.
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate()]
+
+Trainer.n_iterations = 400
+Trainer.valid_every_n_iterations = 100000000   # skip SCENT's own mid-run validation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+ScentFixedRewardRun.trainer = %trainer
+ScentFixedRewardRun.reward_generator = %train_proxy
+ScentFixedRewardRun.n_samples = 200
+ScentFixedRewardRun.sample_oversample = 6.0
+ScentFixedRewardRun.top_k = 100
+ScentFixedRewardRun.system = 'clpp'
+ScentFixedRewardRun.generator_name = 'scent'
+ScentFixedRewardRun.reward_name = 'clpp_docking'
+ScentFixedRewardRun.score_units = 'clip(-vina) reward (higher is better; raw Vina in raw_score column)'

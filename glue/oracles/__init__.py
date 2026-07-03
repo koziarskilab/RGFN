@@ -23,7 +23,10 @@ from glue.oracles.docking_gpu_differential_oracle import (  # noqa: F401
     Docking6TD3GpuOracle,
     GpuDifferentialDockingOracle,
 )
-from glue.oracles.docking_seh_oracle import DockingSEHOracle  # noqa: F401
+from glue.oracles.docking_seh_oracle import (  # noqa: F401
+    DockingClpPOracle,
+    DockingSEHOracle,
+)
 from glue.oracles.mock_oracle import MockGlueOracle  # noqa: F401
 
 __all__ = [
@@ -32,5 +35,6 @@ __all__ = [
     "Docking6TD3GpuOracle",
     "GpuDifferentialDockingOracle",
     "DockingSEHOracle",
+    "DockingClpPOracle",
     "MockGlueOracle",
 ]

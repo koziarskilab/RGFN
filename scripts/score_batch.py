@@ -55,6 +55,7 @@ from glue.metrics.dataset_metrics import batch_metrics
 from glue.oracles import (
     Docking6TD3GpuOracle,
     Docking6TD3Oracle,
+    DockingClpPOracle,
     DockingSEHOracle,
     MockGlueOracle,
 )
@@ -65,6 +66,7 @@ ORACLES = {
     "docking_6td3_gpu": Docking6TD3GpuOracle,
     "docking_6td3": Docking6TD3Oracle,
     "docking_seh": DockingSEHOracle,
+    "docking_clpp": DockingClpPOracle,
     "mock": MockGlueOracle,
 }
 

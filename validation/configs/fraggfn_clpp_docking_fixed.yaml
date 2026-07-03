@@ -1,0 +1,40 @@
+# FragGFN FIXED-REWARD baseline on ClpP GPU DOCKING (single target).
+#
+# Per-step docking-in-the-loop for the non-synthesizable foil: each training step shells to
+# `conda run -n rgfn scripts/score_batch.py --oracle docking_clpp` (QV2-GPU + gnina) via
+# DockingBridgeReward, training FragGFN on clip(-Vina). No AL loop, no oracle. FragGFN uses
+# its OWN fragment library (the deliberate native foil). Matches RGFN's
+# configs/glue/fixed_reward_clpp_docking.gin (beta=4, 400 iters). See Logs/021.
+#
+# Run (repo root, fraggfn env; docking libs must be exported for the rgfn subprocess):
+#   conda run -n fraggfn python validation/generators/fraggfn/run_fraggfn_fixed.py \
+#       --cfg validation/configs/fraggfn_clpp_docking_fixed.yaml --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/fraggfn_clpp
+  root_dir: experiments
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 400
+  n_samples: 200
+  sample_oversample: 6.0
+  top_k: 100
+  beta: 4
+  system: clpp
+  reward_name: clpp_docking
+  score_units: "clip(-vina) reward (higher is better; raw Vina kcal/mol in raw_score column)"
+
+reward:
+  type: docking
+  oracle: docking_clpp
+  norm: 1.0
+  clip: 10.0
+
+gflownet:
+  max_nodes: 9
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 10

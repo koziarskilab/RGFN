@@ -1,0 +1,25 @@
+{
+  "_comment": "Sweep spec for scripts/analyze_gfn.py --spec. Keys = glue.analysis.SweepSpec. Strategy entries are [name, {kwargs}]. Sweeps hub- and molecule-selection strategies across m (lanes) and k (products/lane) over several trials; the diversity/concurrency/cost columns in results.csv are the Pareto raw material.",
+  "hub_selectors": [
+    ["highest_flow", {}],
+    ["most_modes", {"reward_quantile": 0.5}],
+    ["highest_expected_reward", {"aggregate": "mean"}],
+    ["highest_child_reward", {}]
+  ],
+  "mol_selectors": [
+    ["top_k_reward", {}],
+    ["top_k_reward_diverse", {"similarity_threshold": 0.7}],
+    ["scaffold_diverse_k", {}]
+  ],
+  "m_values": [2, 4, 8, 16, 32],
+  "k_values": [10, 25, 50],
+  "expander": ["observed", {}],
+  "n_trials": 3,
+  "sample_size": 5000,
+  "batch_size": 250,
+  "base_seed": 42,
+  "library_dir": "data/libraries/glue_standard_v1",
+  "per_reaction_cost": 1.0,
+  "yield_adjusted": false,
+  "write_plans": false
+}
