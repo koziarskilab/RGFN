@@ -1,0 +1,42 @@
+# RxnFlow FIXED-REWARD baseline on sEH — SHARED-LIBRARY variant.
+#
+# Identical to validation/configs/rxnflow_seh_fixed.yaml (train RxnFlow's reaction-template
+# + building-block synthesis GFN ONCE against the FROZEN Bengio-2021 sEH proxy, β=8, no loop
+# / no oracle, routes -> has_route=1) EXCEPT the library: instead of RxnFlow's native 10k
+# ZINCFrag blocks + 109 Enamine-REAL templates, it uses the shared standard set
+# `glue_standard_v1` baked into data/models/rxnflow_env_stdlib (412 blocks / 112 templates
+# from SCENT's SMALL library) so RGFN / SCENT / RxnFlow all share ONE library. See
+# docs/CHEM_LIBRARY_FORMAT.md and Logs/020.
+#
+# Run (from repo root, rxnflow env; candidate emission shells to rgfn env):
+#   conda run -n rxnflow python validation/generators/rxnflow/run_rxnflow_fixed.py \
+#       --cfg validation/configs/rxnflow_seh_fixed_stdlib.yaml --seed 42 --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/rxnflow_seh_stdlib   # run dir: <root>/fixed_reward/rxnflow_seh_stdlib/<timestamp>
+  root_dir: experiments                   # overridden by --root-dir on Balam ($SCRATCH)
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 5000        # ~matched to RGFN's Trainer.n_iterations=5002 (single-shot)
+  n_samples: 1000            # unique valid molecules to emit as candidates
+  sample_oversample: 4.0
+  top_k: 100
+  beta: 8                    # == RGFN fixed_reward_seh_proxy.gin beta
+
+# Frozen sEH reward generator (pretrained Bengio-2021 MPNN via gflownet.models.bengio2021flow).
+reward:
+  clip: 10.0
+  batch_size: 128
+
+# RxnFlow synthesis-GFlowNet generator hyperparams (mirror rxnflow_seh_fixed.yaml).
+rxnflow:
+  env_dir: data/models/rxnflow_env_stdlib  # SHARED library (glue_standard_v1 baked; 412 blocks / 112 templates)
+  max_reactions: 4                   # synthesis depth (trajectory length)
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 100
+  action_sampling_ratio: 0.01        # action-space subsampling; min_sampling floor (100) applies to the 412-block set
+  # device: auto (cuda if available)

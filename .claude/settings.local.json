@@ -218,7 +218,25 @@
       "Bash(python3 -c \"import pdfminer; print\\('pdfminer'\\)\")",
       "Bash(xargs basename -a)",
       "Bash(sinfo -o \"%.14P %.6D %.14F %.10l\")",
-      "Bash(bash -n experiments/fixed_reward/submit_aizynth_fourway.sh)"
+      "Bash(bash -n experiments/fixed_reward/submit_aizynth_fourway.sh)",
+      "Bash(sacct --starttime 2026-07-01 --format=JobID,JobName%18,State,ExitCode,Elapsed)",
+      "Bash(sort -k3)",
+      "Bash(awk 'NR>=35 && NR<=106 && /\\\\\\(\"/' /home/markymoo/projects/RGFN_Fork/RGFN-Fork/external/gflownet/src/gflownet/models/bengio2021flow.py)",
+      "Bash(sinfo -p compute)",
+      "Bash(grep -c SMOKE_OK __TRACKED_VAR__/smoke.log)",
+      "Bash(chmod +x experiments/fixed_reward/stdlib_seh/*.sh)",
+      "Bash(bash -n experiments/fixed_reward/stdlib_seh/submit_fixed_rgfn_stdlib_seh.sh)",
+      "Bash(bash -n experiments/fixed_reward/stdlib_seh/submit_fixed_rxnflow_stdlib_seh.sh)",
+      "Bash(sacct -j 69606,69608 --format=JobID,JobName%22,State,Elapsed,End)",
+      "Bash(sacct --starttime 2026-07-01 --format=JobID,JobName%20,State,ExitCode,Elapsed)",
+      "Bash(ssh -o StrictHostKeyChecking=no balam004 nvidia-smi --query-gpu=index,utilization.gpu,memory.used --format=csv,noheader)",
+      "Bash(sinfo -p compute -o \"%.15P %.15l %.6D %.6t\")",
+      "Bash(sacctmgr -n show assoc user=markymoo format=account,qos,maxwall,grpwall)",
+      "Bash(sacctmgr -n show qos format=name,maxwall,maxtres%20)",
+      "Bash(scancel 69613)",
+      "Bash(scancel 69615)",
+      "Bash(sacct -j 69606,69607,69608,69609,69610,69611,69612 --format=JobID,JobName%20,State,Elapsed)",
+      "Bash(sacct -j 69616,69614,69608,69606 --format=JobID,JobName%22,State,Elapsed,End)"
     ]
   }
 }

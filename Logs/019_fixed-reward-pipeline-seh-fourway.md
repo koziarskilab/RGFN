@@ -169,10 +169,51 @@ are **not yet committed**. [TODO — add commit hash after pushing.] Files to co
 | QED | mean 0.255 |
 | AiZynth success (top-5 spot check) | 0.80 (4/5), steps_mean 4.5, SA_mean 3.38 |
 
-**Four-way synthesizability comparison (RGFN / FragGFN / RxnFlow / SCENT):**
-[TODO — fill from `validation/results/seh_fixed_reward/comparison.csv` once RxnFlow (69607)
-and SCENT (69608) finish and `submit_aizynth_fourway.sh` has run. RGFN row above is ready;
-FragGFN 69606 running; RxnFlow/SCENT queued at 24 h.]
+**Four-way synthesizability comparison** (AiZynthFinder over top-100; `success` = fraction
+with a route to purchasable stock). Committed: `validation/results/{seh,drd2}_fixed_reward/comparison.{csv,md}`.
+
+*sEH* (all four reach similar sEH reward ~6.4–7.5, so synthesizability is the differentiator):
+
+| generator | synth-by-construction | AiZynth success | SA | MW | QED |
+|---|---|---|---|---|---|
+| SCENT | yes | **0.71** | 3.13 | 514 | 0.29 |
+| RGFN | yes | 0.52 | 3.22 | 535 | 0.26 |
+| RxnFlow | yes | 0.33 | 4.65 | 718 | 0.20 |
+| FragGFN | no | **0.02** | 4.32 | 690 | 0.17 |
+
+*DRD2*:
+
+| generator | reward mean | synth | AiZynth success | SA | MW | QED |
+|---|---|---|---|---|---|---|
+| RGFN | 0.895 | yes | **0.47** | 3.10 | 486 | 0.34 |
+| RxnFlow | 0.793 | yes | 0.30 | 3.33 | 534 | 0.29 |
+| SCENT | 0.918 | yes | 0.25 | 3.29 | 509 | 0.35 |
+| FragGFN | **0.035** | no | **0.00** | 4.67 | 680 | 0.19 |
+
+Headline: the non-synthesizable foil (FragGFN) is ~0% independently synthesizable on both
+targets (2% / 0%) vs 25–71% for the reaction/building-block generators — the paper's
+synthesizability contrast. Honest nuance: the by-construction `has_route=1` generators are
+only *partly* reproduced by AiZynth (25–71%), because AiZynth's ZINC stock + USPTO templates
+are a different library than each generator's blocks — so it's an independent check, not a
+tautology.
+
+**FragGFN–DRD2 anomaly + diagnosis (diverges from the RGFN paper, which reports FragGFN
+optimizes DRD2).** Unlike the consistent sEH result, FragGFN's DRD2 reward stayed flat at the
+random base rate (mean 0.035, 918/1000 candidates < 0.05 DRD2 activity) — it never discovered
+active chemistry, while RGFN/RxnFlow/SCENT (all at the same constant β=48) reached ~0.79–0.92.
+Evidence it's an *exploration* failure, not a bug: (a) TB loss converged to ~0.5 (healthy);
+(b) the training-DB flat-reward (`fr_0`) trajectory is dead flat across all 10 deciles for
+DRD2 but climbs 472→1480 for sEH; (c) RxnFlow used the *identical* `DRD2FrozenReward` scorer
+and succeeded, so the reward is wired correctly; (d) `ci_beta` was a constant 48, whereas
+gflownet's stock FragGFN task (`seh_frag.py`) samples temperature **uniformly from [0,64]** —
+i.e. our fixed-β regime (chosen to match RGFN's single fixed β) removes the temperature-
+annealed exploration a fragment generator needs to find a *sparse* target like DRD2. The
+building-block/reaction generators tolerate constant β=48 because their block prior starts
+near drug-like/active chemistry. **Confirmatory run (job 69690, `fraggfn_drd2_uniform.yaml`):**
+FragGFN-DRD2 with uniform β∈[0,64], final batch sampled at the exploitation β — a `temperature`
+config block was added to the FragGFN runner (`constant` default, `uniform` for this
+diagnostic; sEH/matched runs unchanged). [PENDING result: if reward climbs, the four-way
+failure was the fixed-β regime; if it still flatlines, it's a genuine fragment-prior limit.]
 
 **First-attempt job outcomes (2026-07-01):**
 

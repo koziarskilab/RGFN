@@ -25,9 +25,15 @@ source /home/markymoo/miniconda3/etc/profile.d/conda.sh
 SYSTEM=${SYSTEM:-seh}
 FR_ROOT=$SCRATCH/rgfn_runs/experiments/fixed_reward
 CONFIG=data/models/aizynthfinder/config.yml
-RESULTS=validation/results/${SYSTEM}_fixed_reward
+# $HOME (the repo) is READ-ONLY on Balam compute nodes, so the aggregated table must be
+# written to $SCRATCH here — NOT into validation/results/ (that write fails with
+# PermissionError; jobs 69688/69689). Copy it into the repo from the login node afterwards:
+#   cp $SCRATCH/rgfn_runs/results/${SYSTEM}_fixed_reward/comparison.* validation/results/${SYSTEM}_fixed_reward/
+# (The per-dataset synthesizability_summary.json files are written under each candidate dir
+# on $SCRATCH by synthesizability.py, so those are unaffected.)
+RESULTS=$SCRATCH/rgfn_runs/results/${SYSTEM}_fixed_reward
 mkdir -p "$RESULTS"
-echo "host=$(hostname) SYSTEM=$SYSTEM"
+echo "host=$(hostname) SYSTEM=$SYSTEM  results->$RESULTS"
 
 # generator label -> run-dir subfolder under $FR_ROOT (RGFN's sEH run dir is 'seh_proxy';
 # all others follow <gen>_<system>).

@@ -156,7 +156,24 @@ def main() -> None:
     gcfg.model.num_emb = int(gfn_c.get("num_emb", 128))
     gcfg.model.num_layers = int(gfn_c.get("num_layers", 4))
     gcfg.opt.learning_rate = float(gfn_c.get("learning_rate", 1e-4))
-    build_constant_temperature(gcfg, beta)  # fixed β, matches RGFN
+    # Temperature schedule. Default 'constant' β (matches RGFN's single fixed β — used by
+    # the matched four-way runs). 'uniform' enables gflownet's native temperature-annealed
+    # exploration (β sampled per-trajectory from [low, high]) — the DRD2 exploration
+    # diagnostic (Logs/019): a constant high β can't discover a sparse-reward mode.
+    temp_c = cfg.get("temperature", {})
+    temp_mode = temp_c.get("mode", "constant")
+    temp_high = float(temp_c.get("high", 64.0))
+    if temp_mode == "uniform":
+        temp_low = float(temp_c.get("low", 0.0))
+        gcfg.cond.temperature.sample_dist = "uniform"
+        gcfg.cond.temperature.dist_params = [temp_low, temp_high]
+        print(
+            f"[FGFN-FR] TRAIN temperature=uniform[{temp_low},{temp_high}] (annealed exploration)",
+            flush=True,
+        )
+    else:
+        build_constant_temperature(gcfg, beta)  # fixed β, matches RGFN
+        print(f"[FGFN-FR] TRAIN temperature=constant beta={beta}", flush=True)
 
     trainer = FragGFNTrainer(gcfg, proxy=reward)
 
@@ -188,6 +205,20 @@ def main() -> None:
         flush=True,
     )
     loop._train_steps(n_train_steps)
+
+    # For a uniform-temperature (annealed) run, sample the final batch from the
+    # EXPLOITATION policy: condition at a fixed high β via the *uniform* branch
+    # (dist_params=[sb, sb]) so the thermometer encoding matches what the model saw for
+    # high-β trajectories. (The 'constant' branch encodes β as zeros, which a
+    # uniform-trained model reads as β≈0 = explore — the opposite of what we want.)
+    if temp_mode == "uniform":
+        from gflownet.utils.conditioning import TemperatureConditional
+
+        sb = float(temp_c.get("sample_beta", temp_high))
+        trainer.cfg.cond.temperature.sample_dist = "uniform"
+        trainer.cfg.cond.temperature.dist_params = [sb, sb]
+        trainer.task.temperature_conditional = TemperatureConditional(trainer.cfg)
+        print(f"[FGFN-FR] final sampling at fixed beta={sb} (exploitation policy)", flush=True)
 
     # 2. sample a batch of unique valid molecules (chunked to bound GPU memory; a single
     #    n_samples*oversample sampling call OOMs at this scale — job 69564).
