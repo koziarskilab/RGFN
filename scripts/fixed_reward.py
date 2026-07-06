@@ -43,6 +43,27 @@ if __name__ == "__main__":
             "only works on the writable login node."
         ),
     )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help=(
+            "Use this exact run_name instead of the auto '<config>/<timestamp>'. Set it to "
+            "an EXISTING run dir's relative name to resume into it (so the resumed run writes "
+            "checkpoints + candidates back to the same place). Pair with --resume-from."
+        ),
+    )
+    parser.add_argument(
+        "--resume-from",
+        type=str,
+        default=None,
+        help=(
+            "Path to a Trainer checkpoint (e.g. <run>/train/checkpoints/last_gfn.pt) to resume "
+            "training from. The Trainer reads start_iteration from it and continues to "
+            "n_iterations, then the pipeline samples + emits — used to finish a docking run that "
+            "hit the SLURM walltime mid-training (Logs/021, RGFN-6TD3 job 69695)."
+        ),
+    )
     args = parser.parse_args()
 
     seed_everything(args.seed)
@@ -52,11 +73,13 @@ if __name__ == "__main__":
     # seh_proxy). Run outputs are timestamped subdirs and stay git-ignored.
     if config_name.startswith("fixed_reward_"):
         config_name = "fixed_reward/" + config_name[len("fixed_reward_") :]
-    run_name = f"{config_name}/{get_time_stamp()}"
+    run_name = args.run_name if args.run_name else f"{config_name}/{get_time_stamp()}"
     # Bind the run seed onto the pipeline so it lands in the candidate-dataset manifest.
     bindings = [f'run_name="{run_name}"', f"FixedRewardPipeline.seed={args.seed}"]
     if args.root_dir is not None:
         bindings.append(f'user_root_dir="{args.root_dir}"')
+    if args.resume_from is not None:
+        bindings.append(f'Trainer.resume_path="{args.resume_from}"')
     gin.parse_config_files_and_bindings([args.cfg], bindings=bindings)
 
     pipeline = FixedRewardPipeline()

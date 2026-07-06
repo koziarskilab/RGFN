@@ -31,13 +31,20 @@ action space alone.
 
 ## Answer
 
-*(Pending — runs in flight.)* Will state, once the four candidate sets are scored, whether
-RGFN's synthesizability advantage and the score parity from entry `019` survive when the
-three synthesizable generators share one library — i.e. whether entry `019`'s conclusions
-were about the generators or about their libraries. Smoke tests confirmed the machinery
-works end-to-end: RGFN builds valid routed molecules from `glue_standard_v1`, and RxnFlow
-trains stably (finite loss, no NaN) on the shrunk 412-block library — the one real risk
-going in.
+With the building-block library held fixed across the three synthesizable generators, the
+differences from entry `019` **persist and sharpen** — so they were about the *generators*,
+not their libraries. On identical chemistry the three separate into distinct corners rather
+than converging: **SCENT** wins on sEH reward (median 7.63), route cost (cheapest, with a
+coverage caveat), *and* external synthesizability (AiZynth 0.71); **RxnFlow** is by far the
+most drug-like (QED 0.62 vs 0.22–0.29) and smallest (MW 413), at the price of the lowest
+reward (6.22) and — surprisingly — the lowest AiZynth recovery (0.29) despite a 100%
+by-construction route claim; **RGFN** scores well but drifts largest of the three and is the
+priciest to synthesize. The **non-synthesizable foil (FragGFN)** matches on reward yet is
+externally unsynthesizable (AiZynth 0.02, SA 4.32), confirming that reward parity ≠
+synthesizability. Two methodological results fall out: (1) the library was *not* the
+confound behind entry `019`; (2) "synthesizable by construction" (`has_route=1`) is not
+uniform — an independent retrosynthesis tool recovers SCENT/RGFN routes far more often than
+RxnFlow's, on the same library.
 
 ## Relevance to our Publication
 
@@ -202,7 +209,57 @@ the `.npy`.)
 **Standard library `glue_standard_v1`:** 418 fragments (418 priced), 112 reactions (112 with
 yields); RxnFlow env retained 412 blocks. Source: `external/scent/data/small/`.
 
-**Four-way comparison (RGFN / SCENT / RxnFlow on `glue_standard_v1`; FragGFN native foil):**
-[TODO — fill once 69615/69614 finish and the AiZynth table runs. Jobs: RGFN 69615
-(running, 3-day walltime), RxnFlow 69614 (running); SCENT 69608 (running, on SMALL≡shared
-lib); FragGFN 69606 (COMPLETED, 1000 candidates).]
+**Four-way comparison (RGFN / SCENT / RxnFlow on `glue_standard_v1`; FragGFN native foil).**
+All four runs COMPLETE (1000 candidates each): RGFN 69616 (2d01h), RxnFlow 69614 (3h13m),
+SCENT 69608 (9h25m), FragGFN 69606 (2h05m).
+
+*Descriptors + reward (1000 candidates each):*
+
+| generator | has_route | sEH score (med / max) | MW (med) | QED (med) |
+|---|---|---|---|---|
+| SCENT | 1000/1000 | **7.63** / 8.39 | 515 | 0.26 |
+| RGFN | 1000/1000 | 7.26 / 8.35 | 551 | 0.22 |
+| FragGFN (foil) | 0/1000 | 7.23 / 8.42 | 688 | 0.16 |
+| RxnFlow | 1000/1000 | 6.22 / 7.34 | **415** | **0.66** |
+
+*Synthesis cost (retroactive `PathCostProxy` pricing on `glue_standard_v1`, top-100 by score;
+`validation/harness/cost.py`; lower = cheaper):*
+
+| generator | priced | top-100 cost (med / mean) | route len | any-fallback |
+|---|---|---|---|---|
+| SCENT | 1000/1000 | 2.88 / 7.33 | 2.71 | 0.744 |
+| RxnFlow | 1000/1000 | 7.78 / 14.4 | 2.98 | 0.000 |
+| RGFN | 1000/1000 | 34.15 / 36.9 | 3.94 | 0.000 |
+| FragGFN | 0/1000 | — (no routes) | — | — |
+
+Cost **coverage caveat:** RGFN and RxnFlow price at 0% fallback (every route component is a
+base `glue_standard_v1` block/reaction → exact). SCENT hits ~74% fallback because its
+**dynamic library** promotes synthesized intermediates to building blocks absent from the
+base library; those are imputed at the default cost (1.0), so SCENT's cost is an approximate
+lower bound, not directly comparable to the fully-priced RGFN/RxnFlow. Full table:
+`validation/results/seh_fixed_reward_stdlib/cost_comparison.{csv,md}`.
+
+*Synthesizability (AiZynthFinder + SA, top-100; job 69867, COMPLETE 14m25s;
+`validation/results/seh_fixed_reward_stdlib/comparison.{csv,md}`):*
+
+| generator | self-route (by-construction) | AiZynth success | steps | SA |
+|---|---|---|---|---|
+| SCENT | 1.00 | **0.71** | 4.07 | 3.13 |
+| RGFN | 1.00 | 0.66 | 4.08 | 3.36 |
+| RxnFlow | 1.00 | **0.29** | 4.07 | 3.46 |
+| FragGFN (foil) | 0.00 | 0.02 | 3.50 | 4.32 |
+
+The **by-construction claim (`self-route`) vs the independent AiZynth verdict diverge**, and
+that divergence is the interesting result: SCENT/RGFN's routes are largely recovered by an
+external retrosynthesis tool (0.71 / 0.66), FragGFN's are not (0.02 — it never claimed any),
+but **RxnFlow's are recovered only 29% of the time despite a 100% by-construction claim** —
+its small, drug-like molecules use block/connectivity choices AiZynth's USPTO+ZINC stock
+often can't reproduce. So "synthesizable by construction" is strongest for SCENT/RGFN and
+weakest (externally) for RxnFlow, on identical chemistry.
+
+**Headline (same-library, generator is the only variable across the synthesizable three):**
+on identical chemistry, the three synthesizable generators separate cleanly — SCENT posts
+the best sEH reward at moderate size and the cheapest routes (with the dynamic-library
+caveat); RxnFlow is the most drug-like (QED 0.66) and smallest at a modest reward cost and
+0%-fallback cheap routes; RGFN scores well but drifts largest of the three and priciest to
+synthesize. FragGFN (non-synth foil) matches on reward but carries no route (has_route=0).

@@ -108,3 +108,30 @@ After runs finish: `sbatch --export=ALL,SYSTEM=6td3 experiments/fixed_reward/sub
 (and `SYSTEM=clpp`) → synthesizability tables (run-dir names align, no change needed). Caveat:
 the DRD2-on-SMALL runs use `*_stdlib` run-dir names → need an aizynth `SUBDIR` tweak (shared with
 the existing sEH-stdlib four-way).
+
+## Results (2026-07-06) — 8/10 emitted; 1 resumed; 1 proxy still running
+
+Docking raw score = binding (lower better); 6TD3 in the glue range is ≤ −2. **The baseline
+per-step cross-env docking worked** — all three baselines docked end-to-end and produced
+glue-range molecules, and the AL-era pattern reproduced under fixed-reward: SCENT strongest on
+the 6TD3 differential, RxnFlow the drug-like one, RGFN strongest raw binding.
+
+| gen | ClpP Vina best/med (≤−2) | 6TD3 dvina best/med (≤−2) | routes |
+|---|---|---|---|
+| RGFN | −14.0 / −8.8 (199) | *resumed → 69868* | ✓ |
+| FragGFN (foil) | −10.7 / −6.8 (196) | −4.95 / −2.17 (111) | ✗ |
+| RxnFlow | −10.0 / −6.8 (198) | −4.41 / −1.44 (50) | ✓ (MW 379/QED .45 on ClpP) |
+| SCENT | −12.7 / −9.75 (198) | −5.81 / −2.51 (145) | ✓ |
+
+DRD2 (SMALL): RxnFlow activity median 0.895 (737/825 >0.5); RGFN-DRD2 (69703) still training.
+
+**RGFN-6TD3 timed out at iter 260/400** (20 h; ~277 s/iter — ~2× the smoke estimate, from CPU
+oversubscription with 4 docking jobs sharing balam004 + molecule size-drift), before the emit
+phase. Resumed from its `last_gfn.pt` checkpoint (job **69868**) via a new
+`scripts/fixed_reward.py --run-name/--resume-from` + `experiments/fixed_reward/6td3/submit_resume_6td3.sh`.
+**Gotcha:** upstream `Trainer.__init__` does a STRICT `load_state_dict`, but the forward policy's
+lazily-populated block-embedding cache (`forward_policy.b_action_embedding_fn._cache`) is absent
+from a fresh model → strict load raises "Unexpected key(s)". The resume script strips `*_cache`
+keys from the checkpoint (recomputable) before loading — validated (loads from iter 261). Note
+for real 4000-iter chaining later: raise the docking walltime and/or use `--exclusive` to avoid
+the oversubscription slowdown.

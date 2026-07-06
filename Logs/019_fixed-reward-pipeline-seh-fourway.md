@@ -212,8 +212,28 @@ building-block/reaction generators tolerate constant β=48 because their block p
 near drug-like/active chemistry. **Confirmatory run (job 69690, `fraggfn_drd2_uniform.yaml`):**
 FragGFN-DRD2 with uniform β∈[0,64], final batch sampled at the exploitation β — a `temperature`
 config block was added to the FragGFN runner (`constant` default, `uniform` for this
-diagnostic; sEH/matched runs unchanged). [PENDING result: if reward climbs, the four-way
-failure was the fixed-β regime; if it still flatlines, it's a genuine fragment-prior limit.]
+diagnostic; sEH/matched runs unchanged).
+
+**Diagnostic verdict (job 69690, COMPLETED 2h13m) — exploration hypothesis REFUTED.** Uniform
+temperature barely moved the needle: candidate DRD2 mean 0.036 / max 0.537 / **1** active
+(>0.5) out of 1000, vs constant-β's 0.035 / 0.473 / **0** — both flatline; the synthesizable
+generators get 883–975/1000 actives. So the fixed-β regime is *not* the cause. Two follow-up
+checks then localised it:
+- **Not pharmacophore coverage.** 80% of FragGFN's DRD2 candidates *do* carry the DRD2
+  pharmacophore (a basic aliphatic amine; its 72-fragment vocab has 14 amine fragments) —
+  vs ~100% for the others. It can build the motif; the molecules are just inactive.
+- **It's size/chemotype drift.** FragGFN candidates are MW ~680 (bloated 9-fragment
+  assemblies) vs 486–534 for the building-block generators. DRD2 activity (the TDC SVM) is a
+  narrow *drug-sized* chemotype, so oversized amine-bearing molecules score ~0. The tell:
+  the *same* size drift is rewarded by sEH (large lipophilic pocket → FragGFN scores 7.09)
+  but punished by DRD2 → the identical generator flips from success to failure purely because
+  the two objectives reward opposite size regimes. The building-block/reaction generators stay
+  drug-sized (library/route priors constrain size) and land in the DRD2-active region.
+
+Conclusion: FragGFN's DRD2 collapse is a **size/chemotype-prior** effect, not exploration and
+not pharmacophore reachability. The clean control is a **standardized fragment+reaction library
+across generators** (the `*_stdlib` runs in flight, e.g. job 69703) — if FragGFN still drifts
+oversized on DRD2 under a shared library, the effect is intrinsic to fragment-junction assembly.
 
 **First-attempt job outcomes (2026-07-01):**
 

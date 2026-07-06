@@ -39,6 +39,11 @@ echo "host=$(hostname) SYSTEM=$SYSTEM  results->$RESULTS"
 # all others follow <gen>_<system>).
 if [ "$SYSTEM" = "seh" ]; then
     declare -A SUBDIR=( [rgfn]=seh_proxy [fraggfn]=fraggfn_seh [rxnflow]=rxnflow_seh [scent]=scent_seh )
+elif [ "$SYSTEM" = "drd2" ]; then
+    # DRD2-on-SMALL four-way (Logs/021): rgfn + rxnflow on the shared library (*_stdlib run
+    # dirs), scent native SMALL, fraggfn own lib. (rgfn=drd2_stdlib is job 69703, still training
+    # -> becomes a blank placeholder row via --expect below.)
+    declare -A SUBDIR=( [rgfn]=drd2_stdlib [fraggfn]=fraggfn_drd2 [rxnflow]=rxnflow_drd2_stdlib [scent]=scent_drd2 )
 else
     declare -A SUBDIR=( [rgfn]=$SYSTEM [fraggfn]=fraggfn_$SYSTEM [rxnflow]=rxnflow_$SYSTEM [scent]=scent_$SYSTEM )
 fi
@@ -64,8 +69,11 @@ if [ ${#AGG_ARGS[@]} -eq 0 ]; then
 fi
 
 echo "[aizynth] aggregating: ${AGG_ARGS[*]}"
+# --expect keeps a row for every generator in the four-way, even if its run is still training
+# (a BLANK placeholder to fill in on a later re-run) — e.g. RGFN-6TD3 (69868) / RGFN-DRD2 (69703).
 conda run --no-capture-output -n rgfn python validation/harness/aggregate_synthesizability.py \
     "${AGG_ARGS[@]}" \
+    --expect rgfn --expect fraggfn --expect rxnflow --expect scent \
     --out "$RESULTS/comparison.csv" \
     --out-md "$RESULTS/comparison.md" \
     --title "Matched four-way fixed-reward ${SYSTEM} benchmark (RGFN / FragGFN / RxnFlow / SCENT)"

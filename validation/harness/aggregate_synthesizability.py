@@ -143,7 +143,8 @@ def _write_md(rows: List[Dict], out: Path, title: Optional[str]) -> None:
         cells = []
         for c in cols:
             if c == "has_route":
-                cells.append("yes" if r.get("has_route") else "no")
+                # blank for a pending placeholder row (no 'has_route' key), else yes/no.
+                cells.append("" if "has_route" not in r else ("yes" if r["has_route"] else "no"))
             else:
                 cells.append(_fmt(r.get(c)))
         lines.append("| " + " | ".join(cells) + " |")
@@ -168,24 +169,47 @@ def main() -> None:
     ap.add_argument("--out", required=True, help="output comparison CSV")
     ap.add_argument("--out-md", default=None, help="optional markdown table")
     ap.add_argument("--title", default=None, help="title for the markdown table")
+    ap.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        help="generator that MUST appear as a row, in this order (repeatable). If its "
+        "dataset/summary is missing (e.g. a run still training), emit a BLANK placeholder "
+        "row to fill in later. Without --expect, only scored datasets appear (old behavior).",
+    )
     args = ap.parse_args()
 
-    rows: List[Dict] = []
+    provided: Dict[str, Path] = {}
     for spec in args.dataset:
         if "=" not in spec:
             raise SystemExit(f"--dataset must be NAME=DIR, got {spec!r}")
         name, d = spec.split("=", 1)
-        row = _row_for(name.strip(), Path(d.strip()))
-        if row is not None:
-            rows.append(row)
+        provided[name.strip()] = Path(d.strip())
+
+    # Row order: --expect if given (so pending entrants get blank placeholder rows), else
+    # just the datasets that were provided.
+    order = args.expect if args.expect else list(provided)
+    rows: List[Dict] = []
+    for name in order:
+        row = _row_for(name, provided[name]) if name in provided else None
+        if row is None:
+            if args.expect:  # explicitly expected -> keep a blank row to fill in later
+                print(f"[aggregate] {name!r}: no summary -> BLANK placeholder row", flush=True)
+                row = {"generator": name}
+            else:
+                continue
+        rows.append(row)
     if not rows:
         raise SystemExit("no datasets with a synthesizability_summary.json were found")
 
     _write_csv(rows, Path(args.out))
     if args.out_md:
         _write_md(rows, Path(args.out_md), args.title)
-    # Echo the table to stdout for quick inspection.
+    # Echo the table to stdout for quick inspection (placeholder rows print as PENDING).
     for r in rows:
+        if "has_route" not in r:
+            print(f"  {r['generator']:>8} | PENDING (blank placeholder row)", flush=True)
+            continue
         print(
             f"  {r['generator']:>8} | synth={'yes' if r['has_route'] else 'no ':>3} | "
             f"AiZynth={_fmt(r.get('aizynth_success'))} | SA={_fmt(r.get('sa_mean'))} | "
