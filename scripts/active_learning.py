@@ -32,6 +32,19 @@ if __name__ == "__main__":
     parser.add_argument("--cfg", type=str, required=True)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
+        "--acquisition",
+        type=str,
+        default=None,
+        choices=["policy", "random"],
+        help=(
+            "Which policy proposes each round's query batch: 'policy' (the learned "
+            "RGFN loop) or 'random' (uniform-policy baseline, the [bengio2021gflownet] "
+            "Fig. 7 control). Overrides ActiveLearningLoop.acquisition from the config; "
+            "if omitted, the config's value (default 'policy') is used. Lets one config "
+            "drive both arms of the oracle-efficiency comparison."
+        ),
+    )
+    parser.add_argument(
         "--root-dir",
         type=str,
         default=None,
@@ -52,10 +65,20 @@ if __name__ == "__main__":
     # subdirs and stay git-ignored.)
     if config_name.startswith("active_learning_"):
         config_name = "active_learning/" + config_name[len("active_learning_") :]
-    run_name = f"{config_name}/{get_time_stamp()}"
+    # Disambiguate the run dir by acquisition arm + seed *before* the timestamp:
+    # the curve campaign launches several arms/seeds of the SAME config at once, and
+    # get_time_stamp() has only second resolution — concurrent jobs sharing a config
+    # would otherwise collide on one run dir and clobber each other's per-round
+    # artifacts (observed in the pilot, Logs/023). acq defaults to the config's
+    # value ("policy") when --acquisition is not passed; the oracle_calls.csv
+    # 'acquisition' column remains the source of truth for the arm.
+    acq_tag = args.acquisition or "policy"
+    run_name = f"{config_name}/{acq_tag}_seed{args.seed}/{get_time_stamp()}"
     # Bind the run seed onto the loop so it lands in the suggestion-log manifest
     # provenance (the loop itself only sees what gin gives it; --seed is a CLI arg).
     bindings = [f'run_name="{run_name}"', f"ActiveLearningLoop.seed={args.seed}"]
+    if args.acquisition is not None:
+        bindings.append(f'ActiveLearningLoop.acquisition="{args.acquisition}"')
     if args.root_dir is not None:
         bindings.append(f'user_root_dir="{args.root_dir}"')
     gin.parse_config_files_and_bindings([args.cfg], bindings=bindings)

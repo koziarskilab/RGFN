@@ -13,6 +13,7 @@ trainer and owns the round structure. Everything it uses (proxy, oracle, dataset
 plugs in through the existing ``glue`` interfaces, so it stays oracle-agnostic.
 """
 
+from glue.active_learning.acquisition_trace import AcquisitionTrace  # noqa: F401
 from glue.active_learning.loop import ActiveLearningLoop  # noqa: F401
 
-__all__ = ["ActiveLearningLoop"]
+__all__ = ["ActiveLearningLoop", "AcquisitionTrace"]

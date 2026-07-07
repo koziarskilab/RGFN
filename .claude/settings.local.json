@@ -262,7 +262,10 @@
       "Bash(timeout 600 bash -c 'source ~/bin/rgfn-smoke-env.sh >/dev/null 2>&1 && python '\\\\''__TRACKED_VAR__/tb_diag.py'\\\\'' 100 > '\\\\''__TRACKED_VAR__/tb_diag.out'\\\\'' 2>&1')",
       "Bash(grep -q 'DONE\\\\|Error\\\\|Traceback' __TRACKED_VAR__/tb_diag.out)",
       "Bash(sacct -j 69690 --format=JobID,State,Elapsed)",
-      "Bash(sacct -j 69695,69696,69697,69698,69699,69700,69701,69702,69703,69704 -n -o JobID,JobName%22,State,Elapsed,ExitCode)"
+      "Bash(sacct -j 69695,69696,69697,69698,69699,69700,69701,69702,69703,69704 -n -o JobID,JobName%22,State,Elapsed,ExitCode)",
+      "Bash(git -C /home/markymoo/projects/RGFN_Fork/RGFN-Fork status --short)",
+      "Bash(git -C /home/markymoo/projects/RGFN_Fork/RGFN-Fork log --oneline -5)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

@@ -153,6 +153,13 @@ def _write_md(rows: List[Dict], out: Path, title: Optional[str]) -> None:
         "route to in-stock precursors (the headline synthesizability metric). self-route = "
         "the generator's by-construction route claim (RGFN/RxnFlow/SCENT = 1.0; FragGFN = 0).*\n"
     )
+    pending = [r["generator"] for r in rows if "has_route" not in r]
+    if pending:
+        lines.append(
+            f"\n> **Blank row(s) pending:** {', '.join(pending)} — run still training when this "
+            "table was built. Re-run this system's AiZynth aggregation to fill in "
+            "(see `Logs/021` ▶ PICK UP HERE).\n"
+        )
     out.write_text("\n".join(lines))
     print(f"[aggregate] wrote {out}", flush=True)
 

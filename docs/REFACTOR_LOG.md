@@ -1022,3 +1022,57 @@ untouched. **Placement is the recommended default** (`glue/analysis/` since `glu
 is already post-hoc analysis `validation/` imports); the child-expansion default, cost-now,
 and home are the open forks flagged to the user — a `git mv` moves the tree if they prefer
 `validation/`. **NOT YET**: `git` commit; user sign-off on the forks.
+
+## 2026-07-06 — Oracle-call counting + random-acquisition arm (Objective 1, Fig. 7 curve)
+
+Instrumentation for the top-k-vs-oracle-calls curve reviewers ask for
+(`[bengio2021gflownet]` Fig. 7; RESEARCH_CONTEXT Objective 1). The roadmap flags this
+data as *"cannot be reconstructed later"* — so it is now recorded for **every** AL run,
+regardless of system/oracle/arm. No `rgfn/` edits; the random arm reuses upstream
+`RandomSampler` + `UniformPolicy` verbatim.
+
+- **`glue/active_learning/acquisition_trace.py`** — new. `AcquisitionTrace` writes
+  `<run>/active_learning/oracle_calls.csv`, one row per round: cumulative oracle calls
+  (molecules *submitted* to O, docking failures included), the running Top-K
+  `mean`/`best`, and the best molecule's SMILES (so the actual top candidate at each
+  budget is recoverable without re-reading the per-round dataset dumps). Honours
+  `oracle.higher_is_better` (correct for a future higher-is-better oracle, unlike
+  `OracleLabeledDataset.top_k` which hardcodes ascending).
+- **`glue/active_learning/loop.py`** — (a) records the trace each round + a **round-0
+  baseline** row (Top-K of seed `D_0` at 0 new calls) so both arms anchor at an
+  identical start; forwards `al_oracle_calls_*` / `al_topk_*` to the metrics logger.
+  (b) New `acquisition` param (`"policy"` | `"random"`). `"random"` swaps the query
+  sampler for `RandomSampler(UniformPolicy, env)` — same reaction action space, so the
+  baseline stays synthesizable-by-construction — and **skips proxy-fit + GFN-training**
+  entirely (the Fig. 7 control: only *how the batch is chosen* differs). `_query_sampler()`
+  selects the arm; `_sample_query_batch` (route extraction) is unchanged between arms.
+- **`scripts/active_learning.py`** — new `--acquisition {policy,random}` flag → binds
+  `ActiveLearningLoop.acquisition`, so one config drives both arms.
+- **`validation/harness/acquisition_curve.py`** — new. Reads `oracle_calls.csv` across
+  seeds × arms (files self-describe arm+seed), aggregates mean±std per oracle-call
+  checkpoint, writes the aggregated CSV + the curve PNG (Okabe–Ito, ±std band). Lives in
+  `validation/` (reads only `glue/`-written files — one-way dep rule intact); imports
+  nothing from `glue`.
+- **`configs/glue/active_learning_6td3_gpu_curve.gin`** — thin `include` of the GPU 6TD3
+  config, overriding `n_rounds=10` (320 oracle calls / 10 points) and `top_k=100`.
+- **`experiments/active_learning/6td3/{submit_curve_6td3.sh,launch_curve_6td3.sh}`** —
+  parameterized submit (`ACQ`/`SEED` env) + launcher for the 3-seed × 2-arm campaign.
+
+**Verified** end-to-end on the login node with the mock-oracle AL config
+(`active_learning_mock.gin`), both arms: policy arm runs the full fit→train→sample→score
+loop; random arm correctly skips fit/train (no `fit_proxy`/`train_gfn` phases) and samples
+uniformly; both log identical oracle-call budgets (16→32) with round-0 baseline;
+`AcquisitionTrace` unit tests (lower/higher-is-better, NaN drop) pass; the aggregator reads
+both traces → curve CSV+PNG; gin parses the curve config with overrides confirmed
+(n_rounds=10, top_k=100). **NOT YET**: the real 3-seed × 10-round × 2-arm 6TD3 GPU
+campaign (ready to launch via `launch_curve_6td3.sh`); `git` commit.
+
+**Addendum (pilot, Logs/023, jobs 69945/69946).** Single-seed real-oracle pilot on 6TD3 ran
+both arms to COMPLETION and validated the trace on the real GPU oracle; RGFN beat random on the
+top-k-mean-vs-oracle-calls curve (−0.68 vs −0.14 over 96 calls). It surfaced a **run-dir
+collision**: two arms of the same config launched together resolved `run_name` to one
+timestamped dir (second granularity) and clobbered each other's rewrite-each-round artifacts
+(the append-only `oracle_calls.csv` survived). **Fixed** in `scripts/active_learning.py`:
+`run_name = <config>/<acq>_seed<seed>/<timestamp>` so concurrent arms/seeds never share a dir
+(required for the 6-job campaign). Pilot curve committed at
+`validation/results/6td3_acquisition_curve_pilot/`.

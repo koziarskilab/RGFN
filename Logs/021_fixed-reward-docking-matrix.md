@@ -135,3 +135,55 @@ from a fresh model → strict load raises "Unexpected key(s)". The resume script
 keys from the checkpoint (recomputable) before loading — validated (loads from iter 261). Note
 for real 4000-iter chaining later: raise the docking walltime and/or use `--exclusive` to avoid
 the oversubscription slowdown.
+
+## Synthesizability (AiZynthFinder) — jobs 69870 (6TD3) / 69871 (ClpP) / 69872 (DRD2)
+
+Ran `submit_aizynth_fourway.sh` per system on the completed candidate datasets (RGFN-6TD3 +
+RGFN-DRD2 left as **blank placeholder rows** via the new `aggregate_synthesizability.py
+--expect`). Tables in `validation/results/{6td3,clpp,drd2}_fixed_reward/comparison.md`.
+
+| system | RGFN | FragGFN (foil) | RxnFlow | SCENT |
+|---|---|---|---|---|
+| ClpP  | 0.20 | **0.00** | **0.61** | 0.25 |
+| 6TD3  | 0.16 | **0.00** | 0.25 | 0.21 |
+| DRD2  | *(pending 69703→70034 resume; aizynth 70035)* | **0.00** | 0.24 | 0.28 |
+
+(cells = AiZynth route-found success rate over top-100.) **Headline confirmed by an independent
+retrosynthesis tool:** FragGFN (non-synth foil) = 0.00 everywhere; every reaction-based generator
+gets real routes. Also: by-construction ≠ independently-verifiable — even self-route=1.0
+generators clear AiZynth on only 0.2–0.6 (RxnFlow's small drug-like ClpP mols verify best, 0.61).
+
+---
+
+## ▶ PICK UP HERE — finish the AiZynth scoring (fill the 2 blank RGFN cells)
+
+Two runs were still training when the tables were built; each leaves a blank RGFN row:
+- **RGFN-6TD3** — resume job **69868** (`experiments/fixed_reward/6td3/<ts>/`). On finish emits
+  `.../fixed_reward/candidates/candidates.csv`.
+- **RGFN-DRD2 (SMALL)** — job **69703** (`experiments/fixed_reward/drd2_stdlib/<ts>/`). Same.
+
+When a job shows `COMPLETED` (`sacct -j <id> -o State`) **and** its `candidates/candidates.csv`
+exists, re-run that system's AiZynth aggregation — it scores only the newly-present RGFN dataset
+(the other three are cached) and the RGFN row fills in automatically:
+
+```bash
+sbatch --export=ALL,SYSTEM=6td3 experiments/fixed_reward/submit_aizynth_fourway.sh   # after 69868
+sbatch --export=ALL,SYSTEM=drd2 experiments/fixed_reward/submit_aizynth_fourway.sh   # after 69703
+```
+
+Then copy the refreshed tables from `$SCRATCH` into the repo (compute nodes can't write `$HOME`):
+
+```bash
+for S in 6td3 drd2; do
+  cp $SCRATCH/rgfn_runs/results/${S}_fixed_reward/comparison.{csv,md} validation/results/${S}_fixed_reward/
+done
+```
+
+Notes for whoever picks this up:
+- If RGFN-6TD3 (69868) *also* times out before emitting, resume it again:
+  `sbatch experiments/fixed_reward/6td3/submit_resume_6td3.sh` (auto-detects the latest checkpoint,
+  strips `*_cache`, continues). RGFN-DRD2 is a proxy run (no docking) and should finish in one wall.
+- The aizynth `SUBDIR` map already knows the DRD2-on-SMALL run-dir names
+  (`drd2_stdlib` / `rxnflow_drd2_stdlib` / `scent_drd2` / `fraggfn_drd2`) — no edit needed.
+- **Nothing is committed to git yet** (branch `GPU-Dock`); commit this session's code + results
+  once the two blanks are filled.
