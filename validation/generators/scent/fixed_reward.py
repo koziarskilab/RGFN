@@ -23,8 +23,9 @@ from typing import Dict, List, Optional, Tuple
 
 import gin
 
-# Plain sibling import (NOT package-relative), matching al_loop.py — the runner keeps
+# Plain sibling imports (NOT package-relative), matching al_loop.py — the runner keeps
 # the repo root OFF sys.path so SCENT's installed `rgfn` fork isn't shadowed.
+from guidance_io import save_guidance_models  # noqa: E402
 from route import extract_route  # noqa: E402
 
 from rgfn.gfns.reaction_gfn.api.reaction_api import ReactionStateTerminal
@@ -109,6 +110,11 @@ class ScentFixedRewardRun:
         # 1. train SCENT's generator ONCE against the frozen sEH reward.
         self.trainer.train()
 
+        # 1b. Persist the backward-policy guidance-model weights (cost + decomposability
+        #     MLPs) that objective.state_dict() -> last_gfn.pt silently drops, so the
+        #     trained P_B is exactly recoverable post-hoc (flow analysis). See guidance_io.
+        self._save_guidance_models()
+
         # 2. sample a batch (unique valid terminals + routes + state objects).
         _free_gpu_cache()
         smiles, routes, states = self._sample_batch()
@@ -172,6 +178,26 @@ class ScentFixedRewardRun:
         return top
 
     # ----------------------------------------------------------------- internals
+    def _save_guidance_models(self) -> None:
+        """Write the backward-policy guidance-model weights beside ``last_gfn.pt``.
+
+        ``last_gfn.pt`` holds only ``objective.state_dict()`` = forward policy + logZ;
+        the cost/decomposability guidance MLPs live in a plain Python list on
+        ``JointlyGuidedBackwardPolicy`` and are dropped by ``state_dict()``. Saving them
+        here (same dir as the checkpoint) makes the trained ``P_B`` exactly recoverable.
+        Best-effort: never fail a good training run over provenance."""
+        try:
+            ckpt_dir = Path(self.trainer.run_dir) / "train" / "checkpoints"
+            ckpt_dir.mkdir(parents=True, exist_ok=True)
+            gpath = ckpt_dir / "guidance_models.pt"
+            keys = save_guidance_models(self.trainer.objective, gpath)
+            print(
+                f"[SCENT-FR] saved backward-policy guidance models -> {gpath} (keys={keys})",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[SCENT-FR] WARNING guidance-model save failed: {e}", flush=True)
+
     def _sample_batch(self) -> Tuple[List[str], List[Dict], List]:
         """Sample unique valid terminals from the trained policy; return
         ``(smiles, routes, states)``. Mirrors ``ScentActiveLearningLoop._sample_query_batch``

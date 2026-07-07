@@ -51,6 +51,7 @@ import gin
 # Plain sibling imports (NOT package-relative): the runner puts THIS directory on
 # sys.path[0] and deliberately keeps the repo root OFF it, so SCENT's installed
 # `rgfn` fork isn't shadowed by our repo-local `rgfn/`. See run_scent_al.py.
+from guidance_io import save_guidance_models  # noqa: E402  (sibling module)
 from proxy import (  # noqa: E402  (sibling module, not a package import)
     LearnedDockingProxy,
 )
@@ -261,6 +262,10 @@ class ScentActiveLearningLoop:
                 self._reset_replay_buffer()
             t_fit = time.time()
             self.trainer.train()
+            # Persist the backward-policy guidance-model weights (cost + decomposability
+            # MLPs) beside the round's last_gfn.pt — objective.state_dict() drops them,
+            # so this is what makes the trained P_B exactly recoverable. See guidance_io.
+            self._save_guidance_models()
             t_train = time.time()
 
             # 3. sample a query batch B ~ π_θ (keeping each molecule's route)
@@ -409,6 +414,25 @@ class ScentActiveLearningLoop:
             subprocess.run(cmd, check=True, cwd=str(self.repo_root))
         except subprocess.CalledProcessError as e:  # finalize is provenance, not training
             print(f"[SCENT-AL] WARNING finalize failed: {e}", flush=True)
+
+    def _save_guidance_models(self) -> None:
+        """Write the backward-policy guidance-model weights beside ``last_gfn.pt``.
+
+        ``last_gfn.pt`` holds only ``objective.state_dict()`` = forward policy + logZ; the
+        cost/decomposability guidance MLPs live in a plain Python list on
+        ``JointlyGuidedBackwardPolicy`` and are dropped by ``state_dict()``. Saving them
+        here makes the round's trained ``P_B`` exactly recoverable. Best-effort."""
+        try:
+            ckpt_dir = Path(self.trainer.run_dir) / "train" / "checkpoints"
+            ckpt_dir.mkdir(parents=True, exist_ok=True)
+            gpath = ckpt_dir / "guidance_models.pt"
+            keys = save_guidance_models(self.trainer.objective, gpath)
+            print(
+                f"[SCENT-AL] saved backward-policy guidance models -> {gpath} (keys={keys})",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[SCENT-AL] WARNING guidance-model save failed: {e}", flush=True)
 
     def _reset_replay_buffer(self) -> None:
         """Best-effort clear of the replay buffer between rounds (priorities go stale
