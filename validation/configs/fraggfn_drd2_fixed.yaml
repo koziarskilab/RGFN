@@ -1,0 +1,38 @@
+# FragGFN FIXED-REWARD baseline on the DRD2 surrogate reward generator (RGFN paper's 3rd
+# proxy). Same as fraggfn_seh_fixed.yaml but the reward is the DRD2 activity oracle instead
+# of the sEH proxy: trains Recursion's fragment-GFN ONCE against the frozen DRD2 model (the
+# SAME reward RGFN's fixed_reward_drd2.gin uses — a TDC sklearn+FCFP model, reproduced here
+# from the cached pickle without the heavy PyTDC install). Non-synthesizable -> has_route=0.
+#
+# Run (repo root, fraggfn env; candidate emission shells to the rgfn env):
+#   conda run -n fraggfn python validation/generators/fraggfn/run_fraggfn_fixed.py \
+#       --cfg validation/configs/fraggfn_drd2_fixed.yaml --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/fraggfn_drd2
+  root_dir: experiments
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 5000
+  n_samples: 1000
+  sample_oversample: 4.0
+  top_k: 100
+  beta: 48                    # == RGFN fixed_reward_drd2.gin beta (DRD2 temperature)
+  system: drd2
+  reward_name: drd2
+  score_units: "drd2_tdc_activity (higher is better; 0-1)"
+
+# Frozen DRD2 reward generator (cached TDC sklearn model + FCFP6, no PyTDC install).
+reward:
+  type: drd2
+  model_path: /home/markymoo/projects/RGFN_Fork/RGFN-Fork/oracle/drd2_current.pkl
+  clip: 10.0
+
+gflownet:
+  max_nodes: 9
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 100

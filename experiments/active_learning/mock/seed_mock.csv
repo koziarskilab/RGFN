@@ -1,0 +1,15 @@
+smiles,label
+CC(=O)Oc1ccccc1C(=O)O,0.06421
+CC(C)Cc1ccc(cc1)C(C)C(=O)O,0.155
+Clc1ccccc1C2=NCC(=O)Nc3ccc(cc23)N,0.44286
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C,0.08196
+COc1ccc2cc(ccc2c1)C(C)C(=O)O,0.24486
+CC(C)NCC(O)COc1cccc2ccccc12,0.34765
+O=C(O)c1ccccc1Nc1ccccc1Cl,0.30945
+CCOC(=O)c1ccccc1,0.03754
+c1ccc2c(c1)ccc1ccccc12,0.0513
+OCC1OC(O)C(O)C(O)C1O,0.03386
+CC1=CC(=O)CC(C)(C)C1,0.02386
+NS(=O)(=O)c1ccc(N)cc1,0.05785
+CCN(CC)CCOC(=O)c1ccc(N)cc1,0.18356
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,0.08196

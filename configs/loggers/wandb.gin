@@ -1,4 +1,4 @@
-WandbLogger.mode = 'online'
+WandbLogger.mode = 'offline'
 WandbLogger.project_name = 'RGFN'
 
 WandbLogger.logdir = @logdir/get_str()

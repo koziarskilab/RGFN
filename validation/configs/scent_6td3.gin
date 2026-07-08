@@ -1,0 +1,83 @@
+# SCENT (cost-aware) baseline on 6TD3 — the cost-aware peer to the RGFN entrant.
+#
+# SCENT ([gainski2025scent]) is a fork of RGFN that adds Recursive Cost Guidance,
+# an Exploitation Penalty, and a Dynamic Library. This config mirrors SCENT's own
+# configs/scent_seh_proxy.gin (full cost-aware method on the SMALL library with its
+# SHIPPED building-block prices + reaction yields) but swaps the sEH property proxy
+# for OUR docking-differential proxy M, and matches the RGFN run's budget/seed/β
+# (configs/glue/active_learning_6td3_gpu.gin) so the comparison isolates the generator.
+#
+# Resolution: this file is parsed with CWD = the SCENT clone (external/scent) and that
+# dir on gin's search path (validation/generators/scent/run_scent_al.py handles both),
+# so the `include 'configs/…'` lines below resolve INTO the SCENT clone, and the SMALL
+# library's data/small/* cost+yield files resolve relative to it.
+#
+# Run (from repo root, scent env; the bridge subprocess uses the rgfn env):
+#   conda run -n scent python validation/generators/scent/run_scent_al.py \
+#       --cfg validation/configs/scent_6td3.gin \
+#       --seed-csv experiments/active_learning/6td3/seed_6td3.csv \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+# See experiments/active_learning/scent_6td3/submit_scent_6td3.sh.
+
+include 'configs/scent_base.gin'           # rgfn_base + cost guidance + exploitation penalty + dynamic library
+include 'configs/envs/settings/small.gin'  # SMALL building blocks + shipped fragment_to_real_cost.json + templates_yields.csv
+
+beta = 8                                    # == beta in active_learning_6td3_gpu.gin (fixed inverse temperature)
+
+# Headless logging: offline wandb (the submit script also exports WANDB_MODE=offline).
+WandbLogger.mode = 'offline'
+
+# --- Inner-loop diagnostic metrics: sign-convention-safe subset. -----------------
+# SCENT's default train_metrics (ScaffoldCostsList / NumScaffoldsFound /
+# TanimotoSimilarityModes) are tuned for its sEH reward — higher-is-better, NON-negative
+# proxy values with a "good molecule" threshold of 8. Our docking proxy is the opposite
+# (higher_is_better=False, standardised ~0-mean), and assigns invalid/early-terminal
+# states the worst value (+clip=+10). That +10 trips ScaffoldCost's `proxy>8` filter,
+# which then calls `.molecule` on an early-terminal state (it doesn't guard the type) →
+# AttributeError. These metrics are pure wandb diagnostics during inner GFN training —
+# they do NOT affect generation or the AL comparison (which uses our batch_metrics via
+# the bridge) — so we replace them with a safe subset, keeping SCENT's own synthesis-cost
+# diagnostic (@TrajectoryCost, the cost-awareness signal) + standard GFN stats.
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate(), @TrajectoryCost(), @NumReactions()]
+Trainer.train_metrics = %train_metrics
+
+# --- Proxy M: our refit-able atom-graph MPNN (same arch as the RGFN entrant). ----
+# Replaces SCENT's @SehMoleculeProxy (configs/proxies/target/seh.gin is NOT included).
+proxy/gin.singleton.constructor = @LearnedDockingProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedDockingProxy.higher_is_better = False   # 6TD3 dvina differential: more negative = better
+LearnedDockingProxy.max_epochs = 100
+LearnedDockingProxy.patience = 10
+LearnedDockingProxy.batch_size = 128
+LearnedDockingProxy.lr = 5e-4
+
+# --- Inner GFN budget per round (== active_learning_6td3_gpu.gin). ---------------
+Trainer.n_iterations = 300
+Trainer.valid_every_n_iterations = 100000000   # skip SCENT's own mid-run validation; the AL loop drives evaluation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Outer active-learning loop (same sizing as the RGFN/FragGFN runs). ----------
+# run_dir / repo_root / seed_csv / seed are bound by run_scent_al.py.
+ScentActiveLearningLoop.trainer = %trainer
+ScentActiveLearningLoop.proxy = %train_proxy
+ScentActiveLearningLoop.n_rounds = 3
+ScentActiveLearningLoop.query_batch_size = 32
+ScentActiveLearningLoop.sample_oversample = 4.0
+ScentActiveLearningLoop.top_k = 16
+ScentActiveLearningLoop.system = '6td3'
+ScentActiveLearningLoop.oracle_threshold = -2.0
+ScentActiveLearningLoop.oracle_higher_is_better = False   # MUST equal LearnedDockingProxy.higher_is_better
+
+# --- Oracle bridge: the SHARED Docking6TD3GpuOracle, identical to the RGFN run. ---
+# Reproduces Docking6TD3GpuOracle.* from configs/glue/active_learning_6td3_gpu.gin.
+ScentActiveLearningLoop.oracle_env = 'rgfn'
+ScentActiveLearningLoop.score_script = 'scripts/score_batch.py'
+ScentActiveLearningLoop.oracle_name = 'docking_6td3_gpu'
+ScentActiveLearningLoop.oracle_args = {
+    'exhaustiveness': 8000,
+    'num_modes': 9,
+    'docking_batch_size': 25,
+    'n_gpu': 1,
+}

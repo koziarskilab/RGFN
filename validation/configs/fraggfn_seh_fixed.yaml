@@ -1,0 +1,38 @@
+# FragGFN FIXED-REWARD baseline on sEH — the non-synthesizable foil for the RGFN
+# fixed-reward entrant. Mirrors fraggfn_seh.yaml but single-shot (no active-learning
+# loop, no oracle): train Recursion's fragment-GFN ONCE against the FROZEN pretrained
+# Bengio-2021 sEH proxy (the SAME reward generator RGFN's fixed_reward_seh_proxy.gin
+# uses), then sample + emit candidates. Only the GENERATOR differs from RGFN
+# (fragment-junction action space -> no synthesis route -> has_route=0).
+#
+# Run (from repo root, fraggfn env; candidate emission shells to the rgfn env):
+#   conda run -n fraggfn python validation/generators/fraggfn/run_fraggfn_fixed.py \
+#       --cfg validation/configs/fraggfn_seh_fixed.yaml \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/fraggfn_seh       # run dir: <root>/fixed_reward/fraggfn_seh/<timestamp>
+  root_dir: experiments               # overridden by --root-dir on Balam ($SCRATCH)
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 5000        # ~matched to RGFN's Trainer.n_iterations=5002 (single-shot)
+  n_samples: 1000            # unique valid molecules to emit as candidates
+  sample_oversample: 4.0
+  top_k: 100
+  beta: 8                    # == RGFN fixed_reward_seh_proxy.gin beta (fixed inverse temperature)
+
+# Frozen sEH reward generator (pretrained Bengio-2021 MPNN via gflownet.models.bengio2021flow).
+reward:
+  clip: 10.0
+  batch_size: 128
+
+# Fragment-GFlowNet generator hyperparams (mirror fraggfn_seh.yaml).
+gflownet:
+  max_nodes: 9
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 100
+  # device: auto (cuda if available)

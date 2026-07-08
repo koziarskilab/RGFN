@@ -1,0 +1,42 @@
+# Fixed-reward (single-shot) RGFN on the pretrained sEH proxy — SHARED-LIBRARY variant.
+#
+# Identical to configs/glue/fixed_reward_seh_proxy.gin (train RGFN ONCE against the frozen
+# Bengio-2021 sEH MPNN, β=8, no loop / no oracle) EXCEPT the building-block + reaction
+# library: instead of upstream data/chemistry.xlsx, RGFN builds from the canonical standard
+# set `glue_standard_v1` (data/libraries/glue_standard_v1 = SCENT's SMALL library —
+# 418 fragments, 112 reaction templates, with costs/yields), so RGFN / SCENT / RxnFlow all
+# share ONE library and the benchmark isolates the generator's action space. See
+# docs/CHEM_LIBRARY_FORMAT.md and Logs/020.
+#
+# Run:  python scripts/fixed_reward.py --cfg configs/glue/fixed_reward_seh_proxy_stdlib.gin
+
+include 'configs/glue/fixed_reward_seh_proxy.gin'
+
+# Swap the data factory from the xlsx loader to the canonical-library loader. This binding
+# comes AFTER the include, so it overrides reaction.gin's `@ReactionDataFactory` singleton
+# constructor; ReactionEnv still reads `%data_factory`, now backed by the standard set.
+data_factory/gin.singleton.constructor = @GlueReactionDataFactory
+GlueReactionDataFactory.library_dir = 'data/libraries/glue_standard_v1'
+GlueReactionDataFactory.docking = False
+
+# Distinguish this run's candidate dataset from the chemistry.xlsx run.
+FixedRewardPipeline.generator_name = 'rgfn_stdlib'
+
+# --- Lean training metrics (metric audit, Logs/020) --------------------------------
+# Measured: the full train_metrics set is ~20% of per-iteration cost; the dominant cost is
+# trajectory rollout (which rises as molecules grow during training). We keep only the
+# metrics that MUST be computed live — cheap scalar reductions over each step's own batch
+# that can't be reconstructed afterward — and DEFER everything that is a deterministic
+# function of the generated molecules to the post-hoc evaluator
+# (glue/metrics/dataset_metrics.py), which recomputes QED / Murcko scaffolds / number of
+# modes (identical Morgan r=3, 2048-bit, 0.7 recipe) / internal diversity / novelty over the
+# saved candidate dataset. This removes the periodic TanimotoSimilarityModes spike (it
+# re-scans the whole proxy cache and renders a PNG per mode every `evaluation_step`), trims
+# ~20% off every step, and makes the four-way comparison strictly post-hoc + uniform.
+#   Kept (must-run-live): StandardGFNMetrics (the reward/proxy learning curve),
+#     FractionEarlyTerminate (trajectory health) — both trivial, per-step, unrecoverable.
+#   Kept as the cheap log: UniqueMolecules ({smiles: score} dumped every evaluation_step) —
+#     the "simple log during training" that lets any deferred metric (incl. modes-vs-step
+#     curves) be recomputed afterward.
+#   Deferred to dataset_metrics.py: QED, NumScaffoldsFound, AllMolecules, TanimotoSimilarityModes.
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate(), @UniqueMolecules()]

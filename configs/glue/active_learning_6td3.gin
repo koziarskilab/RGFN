@@ -1,0 +1,63 @@
+# RGFN active-learning loop with the validated 6TD3 docking oracle (Balam).
+#
+# Implements [bengio2021gflownet] Alg. 1 for the CDK12-DDB1 / 6TD3 system. The
+# in-loop reward is the cheap learned MPNN proxy M (fast, called millions of
+# times by RGFN); the expensive two-tier gnina docking oracle O is queried only
+# on the per-round query batch. Hence the GFN trains on the *reaction* env, NOT
+# reaction_docking — docking never enters the inner loop.
+#
+# Requires gnina + GPU + prepared receptors (6TD3_tier{1,2}.pdbqt, crystal_RC8.pdb)
+# => Balam-only. Run with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_6td3.gin --seed 42
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN (Bengio2021 / RGFN MPNNet). -----------
+# Shared singleton: same instance for the GFN reward and the AL loop.
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+# The oracle differential (ddb1_dvina) is a Vina binding energy: lower is better.
+# The proxy's sign MUST match the oracle (the loop asserts this).
+LearnedGlueProxy.higher_is_better = False
+# Proxy-fit budget per round (validate/tune on Balam).
+LearnedGlueProxy.max_epochs = 100
+LearnedGlueProxy.patience = 10
+LearnedGlueProxy.batch_size = 128
+LearnedGlueProxy.lr = 5e-4
+
+# --- Inner GFN budget per round. ----------------------------------------------
+# Paper uses "fewer iterations when fitting the generative model" in the
+# multi-round setting; the neural proxy is cheap so this can be sizeable. Start
+# modest and tune on Balam.
+Trainer.n_iterations = 1000
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: expensive two-tier 6TD3 docking (DDB1 neosubstrate differential).
+# Inputs default to experiments/oracle_validation/docking_6td3/ (present on Balam).
+Docking6TD3Oracle.exhaustiveness = 16
+Docking6TD3Oracle.num_modes = 9
+oracle/gin.singleton.constructor = @Docking6TD3Oracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0: 408 validated docking labels (160 known + 248 decoys). -
+# Column 'label' holds the validated ddb1_dvina differential (Vina T2-T1, the
+# best of six candidate signals: Logs 006 AUROC 0.946 / 007 MW-robust).
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/6td3/seed_6td3.csv'
+OracleLabeledDataset.label_column = 'label'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- The outer active-learning loop. ------------------------------------------
+# query_batch_size=200 mirrors the molecule-domain run in [bengio2021gflownet] A.5.2.
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 5
+ActiveLearningLoop.query_batch_size = 200
+ActiveLearningLoop.top_k = 100

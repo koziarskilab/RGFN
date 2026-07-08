@@ -1,0 +1,29 @@
+# Fixed-reward (single-shot) RGFN on the DRD2 surrogate reward generator.
+#
+# The RGFN paper's third proxy benchmark (`[koziarski2024rgfn]` §4.1): the Dopamine
+# Receptor D2 (DRD2) oracle — a portable Therapeutics Data Commons model
+# (`tdc.Oracle("DRD2")`, sklearn on ECFP; `DRD2Proxy`). Train the GFN ONCE against it, no
+# active-learning loop and NO oracle-refit. RGFN's entry in the matched four-way DRD2 run.
+#
+# We `include` the upstream paper config unchanged (base + reaction env + `DRD2Proxy`,
+# beta=48, DRD2 mode/scaffold thresholds) and overlay only the fixed-reward pipeline wiring.
+include 'configs/rgfn_drd2.gin'
+
+# Bind the `beta` macro. Upstream rgfn_drd2.gin sets `Reward.beta = 48` directly but
+# leaves the `%beta` macro (used by rgfn_base.gin's RewardPrioritizedReplayBuffer.temperature)
+# unbound; set it here so the config finalizes. Matches the paper's DRD2 temperature.
+beta = 48
+
+# Make the Trainer a singleton so the pipeline + the reward share ONE instance.
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+FixedRewardPipeline.trainer = %trainer
+FixedRewardPipeline.reward_generator = %train_proxy
+FixedRewardPipeline.n_samples = 1000
+FixedRewardPipeline.sample_oversample = 4.0
+FixedRewardPipeline.top_k = 100
+FixedRewardPipeline.system = 'drd2'
+FixedRewardPipeline.generator_name = 'rgfn'
+FixedRewardPipeline.reward_name = 'drd2'
+FixedRewardPipeline.score_units = 'drd2_tdc_activity (higher is better; 0-1)'

@@ -15,6 +15,14 @@ name = "rgfn"
 version = "0.0.1"
 description = "RGFN: Synthesizable Molecular Generation Using GFlowNets"
 authors = ["Michał Koziarski", "Andrei Rekesh", "Dmytro Shevchuk", "Almer van der Sloot", "Piotr Gaiński", "Yoshua Bengio", "Cheng-Hao Liu", "Mike Tyers", "Robert A. Batey"]
+# `rgfn` is upstream; `glue` holds our additions; `gin_config` is a shared helper
+# package imported by the entry points. Declaring them here makes `pip install -e .`
+# install all three. See CLAUDE.md / docs/ARCHITECTURE.md for the layout.
+packages = [
+    { include = "rgfn" },
+    { include = "glue" },
+    { include = "gin_config" },
+]
 
 [tool.poetry.dependencies]
 torch-geometric = '2.5.3'
@@ -39,4 +47,4 @@ openbabel-wheel = '3.1.1.19'
 meeko = '0.5.1'
 wurlitzer = '3.1.0'
 xlsxwriter = '3.2.0'
-PyTDC = '1.0.6'
+PyTDC = '0.4.17'

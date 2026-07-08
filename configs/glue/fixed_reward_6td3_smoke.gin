@@ -1,0 +1,12 @@
+# SMOKE test for fixed_reward_6td3.gin — proves the in-env RGFN docking mechanism end-to-end
+# (OracleRewardProxy(Docking6TD3GpuOracle) as the per-step reward, with torch.cuda.empty_cache
+# before each dock so QuickVina2-GPU is not starved while the GFN trains — the risk that likely
+# killed job 69567). 5 training iterations + a tiny final batch: ~a few minutes on a GPU node.
+# NOT a science run. Run:  python scripts/fixed_reward.py --cfg configs/glue/fixed_reward_6td3_smoke.gin --seed 42
+
+include 'configs/glue/fixed_reward_6td3.gin'
+
+Trainer.n_iterations = 5
+FixedRewardPipeline.n_samples = 15
+FixedRewardPipeline.sample_oversample = 3.0
+FixedRewardPipeline.top_k = 10

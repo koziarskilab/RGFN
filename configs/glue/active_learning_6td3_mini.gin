@@ -1,0 +1,60 @@
+# Minimal-but-real 6TD3 active-learning run (Balam).
+#
+# Same wiring as active_learning_6td3.gin, downsized to the smallest budget where
+# we still expect to see (a) the inner GFN reward climb within a round and (b) a
+# cross-round trend in the oracle-scored query batch. Sizing rationale recorded
+# in Logs/. Run with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_6td3_mini.gin --seed 42
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN. -------------------------------------
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedGlueProxy.higher_is_better = False
+LearnedGlueProxy.max_epochs = 100
+LearnedGlueProxy.patience = 10
+LearnedGlueProxy.batch_size = 128
+LearnedGlueProxy.lr = 5e-4
+
+# --- Metrics. -----------------------------------------------------------------
+# Swap upstream @NumScaffoldsFound (crashes on early-terminated trajectories —
+# it reads state.molecule unconditionally) for our crash-safe @SafeNumScaffoldsFound,
+# and orient it for the lower-is-better Vina differential (seed mean -1.25 / std 0.90):
+# count scaffolds reaching increasingly strong predicted glue differentials.
+SafeNumScaffoldsFound.proxy_value_threshold_list = [-2.0, -2.5, -3.0, -3.5]
+SafeNumScaffoldsFound.proxy_component_name = None
+SafeNumScaffoldsFound.proxy_higher_better = False
+train_metrics = [@StandardGFNMetrics(), @SafeNumScaffoldsFound(), @UniqueMolecules(), @AllMolecules(), @FractionEarlyTerminate(), @QED(), @TanimotoSimilarityModes()]
+Trainer.train_metrics = %train_metrics
+
+# --- Inner GFN budget per round (downsized from 1000). -----------------------
+Trainer.n_iterations = 300
+Trainer.valid_every_n_iterations = 100000   # skip mid-run validation in the probe
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: expensive two-tier 6TD3 docking. ------------------------------
+Docking6TD3Oracle.exhaustiveness = 16
+Docking6TD3Oracle.num_modes = 9
+oracle/gin.singleton.constructor = @Docking6TD3Oracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0: 408 validated docking labels. -------------------------
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/6td3/seed_6td3.csv'
+OracleLabeledDataset.label_column = 'label'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- Outer active-learning loop (downsized). ---------------------------------
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 3
+ActiveLearningLoop.query_batch_size = 32
+ActiveLearningLoop.top_k = 16

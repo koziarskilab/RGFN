@@ -1,0 +1,73 @@
+# SCENT (cost-aware) baseline on sEH — the cost-aware peer to the RGFN entrant.
+#
+# The sEH analogue of scent_6td3.gin. SCENT ([gainski2025scent]) is a fork of RGFN
+# that adds Recursive Cost Guidance, an Exploitation Penalty, and a Dynamic Library.
+# sEH is the classic GFlowNet benchmark target ([bengio2021gflownet] / RGFN's
+# configs/rgfn_seh_docking.gin), so this reproduces a well-known result with the
+# cost-aware generator before the novel 6TD3 glue task. This config mirrors SCENT's
+# own configs/scent_seh_proxy.gin (full cost-aware method on the SMALL library with
+# its SHIPPED building-block prices + reaction yields) but swaps SCENT's sEH PROPERTY
+# proxy for OUR refit-able proxy M trained on the real docking_seh labels, and
+# matches the RGFN sEH run's budget/seed/β (configs/glue/active_learning_seh.gin) so
+# the comparison isolates the generator.
+#
+# Resolution: this file is parsed with CWD = the SCENT clone (external/scent) and that
+# dir on gin's search path (validation/generators/scent/run_scent_al.py handles both),
+# so the `include 'configs/…'` lines below resolve INTO the SCENT clone, and the SMALL
+# library's data/small/* cost+yield files resolve relative to it.
+#
+# Run (from repo root, scent env; the bridge subprocess uses the rgfn env):
+#   conda run -n scent python validation/generators/scent/run_scent_al.py \
+#       --cfg validation/configs/scent_seh.gin \
+#       --seed-csv experiments/active_learning/seh/seed_seh.csv \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+# See experiments/active_learning/scent_seh/submit_scent_seh.sh.
+
+include 'configs/scent_base.gin'           # rgfn_base + cost guidance + exploitation penalty + dynamic library
+include 'configs/envs/settings/small.gin'  # SMALL building blocks + shipped fragment_to_real_cost.json + templates_yields.csv
+
+beta = 8                                    # == beta in active_learning_seh.gin (fixed inverse temperature)
+
+# Headless logging: offline wandb (the submit script also exports WANDB_MODE=offline).
+WandbLogger.mode = 'offline'
+
+# --- Proxy M: our refit-able atom-graph MPNN (same arch as the RGFN entrant). ----
+# Replaces SCENT's @SehMoleculeProxy (configs/proxies/target/seh.gin is NOT included).
+proxy/gin.singleton.constructor = @LearnedDockingProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedDockingProxy.higher_is_better = False   # sEH Vina binding energy: more negative = better
+LearnedDockingProxy.max_epochs = 100
+LearnedDockingProxy.patience = 10
+LearnedDockingProxy.batch_size = 128
+LearnedDockingProxy.lr = 5e-4
+
+# --- Inner GFN budget per round (== active_learning_seh.gin). --------------------
+Trainer.n_iterations = 1000
+Trainer.valid_every_n_iterations = 100000000   # skip SCENT's own mid-run validation; the AL loop drives evaluation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Outer active-learning loop (same sizing as the RGFN/FragGFN/RxnFlow runs). ---
+# run_dir / repo_root / seed_csv / seed are bound by run_scent_al.py.
+ScentActiveLearningLoop.trainer = %trainer
+ScentActiveLearningLoop.proxy = %train_proxy
+ScentActiveLearningLoop.n_rounds = 5
+ScentActiveLearningLoop.query_batch_size = 200
+ScentActiveLearningLoop.sample_oversample = 4.0
+ScentActiveLearningLoop.top_k = 100
+ScentActiveLearningLoop.system = 'seh'
+ScentActiveLearningLoop.oracle_threshold = -8.0           # sEH "good binder" Vina cutoff (~Q1 of seed D_0; reporting-only)
+ScentActiveLearningLoop.oracle_higher_is_better = False   # MUST equal LearnedDockingProxy.higher_is_better
+
+# --- Oracle bridge: the SHARED DockingSEHOracle, identical to the RGFN run. -------
+# Reproduces DockingSEHOracle.* from configs/glue/active_learning_seh.gin.
+ScentActiveLearningLoop.oracle_env = 'rgfn'
+ScentActiveLearningLoop.score_script = 'scripts/score_batch.py'
+ScentActiveLearningLoop.oracle_name = 'docking_seh'
+ScentActiveLearningLoop.oracle_args = {
+    'exhaustiveness': 8000,
+    'docking_batch_size': 25,
+    'n_conformers': 1,
+    'n_gpu': 1,
+}

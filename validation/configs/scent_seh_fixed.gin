@@ -1,0 +1,42 @@
+# SCENT FIXED-REWARD baseline on sEH — the cost-aware synthesizable peer to the RGFN
+# fixed-reward entrant. Mirrors scent_seh.gin but single-shot (no active-learning loop,
+# no oracle): train SCENT's cost-guided reaction-GFN ONCE against its FROZEN pretrained
+# @SehMoleculeProxy — the SAME Bengio-2021 sEH checkpoint RGFN's fixed_reward_seh_proxy.gin
+# uses — then sample + emit candidates WITH synthesis routes (has_route=1). Only the
+# GENERATOR differs from RGFN (SCENT's cost guidance + exploitation penalty + dynamic
+# library). Budget/β matched to the RGFN fixed-reward run (configs/glue/fixed_reward_seh_proxy.gin).
+#
+# Parsed with CWD = the SCENT clone (external/scent) on gin's search path (the runner,
+# validation/generators/scent/run_scent_fixed.py, handles both), so the includes resolve
+# INTO the clone and the SMALL library data resolves relative to it.
+#
+# Run (from repo root, scent env; candidate emission shells to the rgfn env):
+#   conda run -n scent python validation/generators/scent/run_scent_fixed.py \
+#       --cfg validation/configs/scent_seh_fixed.gin \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+
+include 'configs/scent_base.gin'           # rgfn_base + cost guidance + exploitation penalty + dynamic library
+include 'configs/envs/settings/small.gin'  # SMALL building blocks + shipped costs + template yields
+include 'configs/proxies/target/seh.gin'   # SCENT's FROZEN @SehMoleculeProxy as %train_proxy (the fixed reward generator)
+
+beta = 8                                    # == RGFN fixed_reward_seh_proxy.gin beta
+
+# Headless logging: offline wandb (the submit script also exports WANDB_MODE=offline).
+WandbLogger.mode = 'offline'
+
+# --- Single training pass (not AL rounds); ~matched to RGFN's Trainer.n_iterations. ---
+Trainer.n_iterations = 5000
+Trainer.valid_every_n_iterations = 100000000   # skip SCENT's own mid-run validation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- The fixed-reward run. reward_generator is the SAME frozen sEH proxy the reward
+#     uses (%train_proxy); no oracle, no refit. run_dir/repo_root/seed bound by the runner.
+ScentFixedRewardRun.trainer = %trainer
+ScentFixedRewardRun.reward_generator = %train_proxy
+ScentFixedRewardRun.n_samples = 1000
+ScentFixedRewardRun.sample_oversample = 4.0
+ScentFixedRewardRun.top_k = 100
+ScentFixedRewardRun.system = 'seh'
+ScentFixedRewardRun.generator_name = 'scent'
+ScentFixedRewardRun.reward_name = 'seh_proxy'

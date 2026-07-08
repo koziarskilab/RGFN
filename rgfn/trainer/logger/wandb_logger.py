@@ -33,7 +33,6 @@ class WandbLogger(LoggerBase):
         group_list = self.experiment_name.split("/")
         group = "/".join(group_list[:-1])
         return wandb.init(
-            dir=self.logdir,
             project=self.project_name,
             name=self.experiment_name,
             group=group,

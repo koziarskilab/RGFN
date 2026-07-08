@@ -1,0 +1,25 @@
+# Fixed-reward (single-shot) RGFN on the DRD2 proxy — SHARED-LIBRARY variant.
+#
+# Identical to configs/glue/fixed_reward_drd2.gin (train RGFN ONCE against the frozen DRD2
+# TDC activity oracle, beta=48, no loop / no oracle) EXCEPT the building-block + reaction
+# library: instead of upstream data/chemistry.xlsx, RGFN builds from the canonical standard
+# set glue_standard_v1 (SCENT's SMALL library: 418 fragments / 112 templates), so RGFN /
+# SCENT / RxnFlow all share ONE library and the four-way DRD2 benchmark isolates the
+# generator's action space. Mirrors fixed_reward_seh_proxy_stdlib.gin. See Logs/020.
+#
+# Run:  python scripts/fixed_reward.py --cfg configs/glue/fixed_reward_drd2_stdlib.gin --seed 42
+
+include 'configs/glue/fixed_reward_drd2.gin'
+
+# Swap the data factory from the xlsx loader to the canonical-library loader (after the
+# include, so it overrides reaction.gin's @ReactionDataFactory singleton constructor).
+data_factory/gin.singleton.constructor = @GlueReactionDataFactory
+GlueReactionDataFactory.library_dir = 'data/libraries/glue_standard_v1'
+GlueReactionDataFactory.docking = False
+
+# Distinguish this run's candidate dataset from the chemistry.xlsx run.
+FixedRewardPipeline.generator_name = 'rgfn_stdlib'
+
+# Lean live metrics (metric audit, Logs/020): defer QED / scaffolds / modes / diversity to
+# the post-hoc dataset evaluator; keep only cheap per-step reductions.
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate(), @UniqueMolecules()]

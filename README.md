@@ -9,6 +9,34 @@ RGFN is a generative model for designing diverse, high-reward small molecules. A
 
 This repository allows users to reproduce experiments described in the associated paper and easily extend the framework to use custom oracles for optimization, e.g. by specifying a different protein target for the GPU-accelerated docking.
 
+---
+
+## 🧬 This fork: molecular-glue research
+
+This is a research fork that extends RGFN to generate **molecular glue degraders**
+with new oracles, reward shaping, batch-selection strategies, benchmarks, and
+dataset tooling.
+
+**The structure separates upstream from our work:**
+
+- `rgfn/` and `configs/` = **pristine upstream RGFN** (kept mergeable; do not edit).
+- `glue/` = **all of our new code** (oracles, rewards, samplers, proxies, datasets).
+- `configs/glue/`, `scripts/`, `validation/`, `experiments/`, `data/`,
+  `Logs/`, `docs/` = our configs, entry points, per-run experiments, inputs, and work.
+
+**Start here:**
+- [`CLAUDE.md`](CLAUDE.md) — the boundary rules + how to add a new oracle/reward/sampler.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full layout and rationale.
+- [`docs/PATCHES.md`](docs/PATCHES.md) — the few deliberate edits to upstream files.
+- [`docs/RESEARCH_CONTEXT.md`](docs/RESEARCH_CONTEXT.md) — the science and goals.
+- [`Logs/references/`](Logs/references/) — the short shelf of papers the method
+  and biology are grounded in; cite by key (e.g. `[koziarski2024rgfn]`).
+
+To train/infer with our components, use the wrappers (they register `glue` with
+gin first): `python scripts/train.py --cfg configs/glue/<cfg>.gin`.
+
+---
+
 ## Setup
 
 To create the conda environment, run the following commands:
@@ -49,7 +77,7 @@ Before following the instructions below, **please read these important notes**:
 To set up QV2GPU for use in the QV2GPU rescoring proxy, run the following command:
 
 ```bash
-sh scripts/install_qv2gpu.sh <workspace_directory>
+sh external/setup_qv2gpu.sh <workspace_directory>
 ```
 
 The default installation path points to `quickvina_dir`. To make this work with your Vina-GPU-2.1 installation path, you can create a symlink:

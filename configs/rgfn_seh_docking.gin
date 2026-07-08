@@ -5,3 +5,8 @@ include 'configs/proxies/target/seh_docking.gin'
 
 NumScaffoldsFound.proxy_value_threshold_list = [10, 11, 12, 13]
 beta = 4
+
+# GPU docking is ~160s/iter (vs ~10s for the neural proxy), so the base config's
+# 5002 iterations would take ~9 days. Cap at 400 (~18h) to complete within the
+# 20h SLURM walltime in submit.sh. Override here only; proxy configs keep 5002.
+Trainer.n_iterations = 400
