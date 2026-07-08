@@ -87,6 +87,10 @@ Root: `./validation/generators/scent/`
   reinit, == a no-sidecar reload) → restore, asserting the restored P_B is bit-exact. Default
   mode is login-safe (loads a trained forward policy from an existing checkpoint, inference
   only); `--train N` trains a fresh short model first (compute node only).
+- `check_trained_sidecar.py` — **new.** End-to-end confirmation on a *production* checkpoint:
+  loads `last_gfn.pt` + the run's own `guidance_models.pt`, and checks the sidecar loads clean,
+  the trained P_B differs from the no-sidecar (random) reload (carries real info), and the
+  reload is deterministic. Args: `<last_gfn.pt> <guidance_models.pt> [config.gin]`. Login-safe.
 
 **Reference (upstream SCENT clone — read, not modified)**
 - `external/scent/rgfn/gfns/reaction_gfn/policies/jointly_biased_backward_policy.py` — the
@@ -101,9 +105,12 @@ Root: `./validation/generators/scent/`
 - Five pre-fix checkpoint dirs (below) now each carry `BACKWARD_POLICY_NOT_SAVED.txt`.
 
 **Job logs** — root `/scratch/markymoo/rgfn_runs/`
-- Patched fixed-reward re-runs submitted 2026-07-07: **70066** (seh), **70067** (drd2),
-  **70068** (6td3, docking), **70069** (clpp, docking). Outputs at `fr_scent_*-<jobid>.{out,err}`;
-  each new run dir will carry `train/checkpoints/guidance_models.pt`.
+- Patched fixed-reward re-runs submitted 2026-07-07: **70066** seh (COMPLETED 11h47m),
+  **70067** drd2 (COMPLETED 12h16m) — both emitted `train/checkpoints/guidance_models.pt`
+  (2.1 MB) beside `last_gfn.pt` and PASSED the end-to-end recovery check (Results).
+  **70068** 6td3 (docking) + **70069** clpp (docking) still running as of write-up (per-step
+  GPU docking is slower); verify with `check_trained_sidecar.py` once they finish. Outputs at
+  `fr_scent_*-<jobid>.{out,err}`.
 
 ### Relevant Versions
 
@@ -114,6 +121,7 @@ Files are **not yet committed** (working tree on branch `GPU-Dock`, base commit 
  M validation/generators/scent/fixed_reward.py
 ?? validation/generators/scent/guidance_io.py
 ?? validation/generators/scent/verify_pb_recovery.py
+?? validation/generators/scent/check_trained_sidecar.py
 ```
 
 Plus this log (`Logs/024_scent-backward-policy-recovery.md`) and the README index row.
@@ -121,7 +129,7 @@ Plus this log (`Logs/024_scent-backward-policy-recovery.md`) and the README inde
 deliberately left unmodified. The five `BACKWARD_POLICY_NOT_SAVED.txt` markers live on
 `$SCRATCH` (outside the repo).
 
-**[TODO — add commit hash after committing the four `validation/generators/scent/` files + this log.]**
+**[TODO — add commit hash after committing the five `validation/generators/scent/` files + this log.]**
 
 ### Relevant Resources
 
@@ -190,6 +198,20 @@ Verdict: `restored == saved` bit-exact (atol 1e-6) = **True**; `corrupt != saved
 **PASS**. Because `load_state_dict` is value-agnostic, an exact restore of these weights
 restores the trained P_B exactly. (The corrupt-vs-saved numbers reproduce the acid test's
 independent reseed finding — 146/195 C-phase steps depend on the unsaved weights.)
+
+**Production-checkpoint confirmation (step 4 output, `check_trained_sidecar.py`).** The two
+completed re-runs, loaded from their own `last_gfn.pt` + `guidance_models.pt`:
+
+| System (job) | sidecar unmatched | trained P_B vs no-sidecar (random) reload | deterministic reload | verdict |
+|---|---|---|---|---|
+| seh (70066) | 0 | C-phase max **7.62** / mean **1.20** nats, 146/195 steps | bit-exact (0.0) | **PASS** |
+| drd2 (70067) | 0 | C-phase max **8.25** / mean **1.16** nats, 141/191 steps | bit-exact (0.0) | **PASS** |
+
+The trained-vs-random gap (max ~8 nats) is ~25× the random-vs-random reseed gap (0.32 max,
+step 3), i.e. the trained guidance is strongly cost-tilted — without the sidecar a reload
+would mis-weight some backward transitions by ~e^8 ≈ 3000×, confirming recovery was
+load-bearing, not cosmetic. (6td3 + clpp docking runs still training at write-up; run
+`check_trained_sidecar.py <last_gfn.pt> <guidance_models.pt> <cfg>` on each when done.)
 
 **Pre-fix runs flagged (step 5).** `BACKWARD_POLICY_NOT_SAVED.txt` written to:
 `active_learning/scent_6td3/2026-06-30_19-46-47`, `fixed_reward/scent_6td3/2026-07-03_14-34-22`,
