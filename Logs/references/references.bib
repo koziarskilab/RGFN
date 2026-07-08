@@ -26,6 +26,39 @@
   note      = {THE paper this fork builds on. Reaction-DAG action space; synthesizable molecules.}
 }
 
+@inproceedings{malkin2022trajectorybalance,
+  title     = {Trajectory Balance: Improved Credit Assignment in {GFlowNets}},
+  author    = {Malkin, Nikolay and Jain, Moksh and Bengio, Emmanuel and Sun, Chen and Bengio, Yoshua},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+  eprint    = {2201.13259},
+  archivePrefix = {arXiv},
+  note      = {The training objective RGFN optimizes (configs/objectives/trajectory_balance.gin): learns P_F, P_B and a single global Z, but no per-state flow F(s). Basis for the balance-based flow estimate F(h)=R(x)P_B(h|x)/P_F(x|h) in glue/analysis/tb_flow.py.}
+}
+
+% --- Baselines: synthesis-aware generators we compare against ---
+
+@misc{seo2024rxnflow,
+  title         = {Generative Flows on Synthetic Pathway for Drug Design},
+  author        = {Seo, Seonghwan and Kim, Minsu and Shen, Tony and Ester, Martin and Park, Jinkyoo and Ahn, Sungsoo and Kim, Woo Youn},
+  year          = {2024},
+  eprint        = {2410.04542},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  note          = {RxnFlow: reaction-template + building-block GFlowNet with action-space subsampling (1.2M blocks x 71 templates). ICLR 2025. Our synthesis-aware comparison generator (validation/generators/rxnflow/) -- the synthesizable peer to RGFN.}
+}
+
+@misc{gainski2025scent,
+  title         = {Scalable and Cost-Efficient de Novo Template-Based Molecular Generation},
+  author        = {Gai{\'n}ski, Piotr and Boussif, Oussama and Rekesh, Andrei and Shevchuk, Dmytro and Parviz, Ali and Tyers, Mike and Batey, Robert A. and Koziarski, Micha{\l}},
+  year          = {2025},
+  eprint        = {2506.19865},
+  archivePrefix = {arXiv},
+  primaryClass  = {q-bio.BM},
+  url           = {https://arxiv.org/abs/2506.19865},
+  note          = {SCENT: a fork of RGFN (same lab) adding Recursive Cost Guidance (synthesis cost from building-block prices + reaction yields), an Exploitation Penalty, and a Dynamic Library. Template-based + synthesizable; RGFN is one of its own baselines. Our cost-aware comparison generator (validation/generators/scent/). Code: https://github.com/koziarskilab/SCENT}
+}
+
 % --- Domain: systems, glue design, and evaluation ---
 
 @article{slabicki2020cr8,
@@ -48,6 +81,30 @@
   pages   = {252--257},
   doi     = {10.1038/nature18611},
   note    = {5HXB system: CRBN-DDB1-GSPT1-CC-885 (the docking ceiling-hit system). NOTE: logs 001/003 mis-cite this as "Science 2016" -- it is Nature.}
+}
+
+@article{genheden2020aizynth,
+  title   = {{AiZynthFinder}: a fast, robust and flexible open-source software for retrosynthetic planning},
+  author  = {Genheden, Samuel and Thakkar, Amol and Chadimov{\'a}, Veronika and Reymond, Jean-Louis and Engkvist, Ola and Bjerrum, Esben},
+  journal = {Journal of Cheminformatics},
+  year    = {2020},
+  volume  = {12},
+  number  = {1},
+  pages   = {70},
+  doi     = {10.1186/s13321-020-00472-1},
+  note    = {Retrosynthesis tool used for the synthesizability metric (validation/harness/synthesizability.py). Reports per-molecule "solved" (route to in-stock blocks found); aggregated to the AiZynth success rate reported by RGFN/RxnFlow/SCENT. Post-hoc validation only, never in-loop.}
+}
+
+@article{ertl2009sascore,
+  title   = {Estimation of synthetic accessibility score of drug-like molecules based on molecular complexity and fragment contributions},
+  author  = {Ertl, Peter and Schuffenhauer, Ansgar},
+  journal = {Journal of Cheminformatics},
+  year    = {2009},
+  volume  = {1},
+  number  = {1},
+  pages   = {8},
+  doi     = {10.1186/1758-2946-1-8},
+  note    = {SA score (1=easy..10=hard). Cheap RDKit-native companion to AiZynth, computed in the same synthesizability evaluator. RDKit ships the implementation as the contrib `sascorer`.}
 }
 
 @article{bengeoffrey2025molde,

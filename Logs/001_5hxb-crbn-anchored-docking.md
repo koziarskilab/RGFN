@@ -30,11 +30,11 @@ This entry is the negative control that justifies our system selection. For Neur
 ## Relevant Files
 
 Scripts:
-- `./pre-processing/clean.py` — carves 5HXB copy 1 into Tier 1 (CRBN only) and Tier 2 (CRBN+GSPT1) receptor structures; retains Zn, removes glue; outputs to `models/`
+- `./research/preprocessing/clean.py` — carves 5HXB copy 1 into Tier 1 (CRBN only) and Tier 2 (CRBN+GSPT1) receptor structures; retains Zn, removes glue; outputs to `models/`
 - `./docking_gnina/anchor_dock.py` — sequential per-molecule warhead-anchored docking (Pass A and B); used in this entry, later consolidated into `dock_cluster_crbn.py`
 - `./docking_gnina/dock_cluster_crbn.py` — batched multi-GPU warhead-anchored docking driver (supersedes `anchor_dock.py`)
 - `./docking_gnina/make_decoys.py` — generates decoys: IMiD glutarimide scaffold + random drug-like arms via amide/urea/sulfonamide/reductive-amination coupling
-- `./pre-processing/compare_systems.py` — prints known-vs-decoy discrimination metrics for each system and cross-system
+- `./research/preprocessing/compare_systems.py` — prints known-vs-decoy discrimination metrics for each system and cross-system
 
 Models:
 - `./docking_gnina/5HXB_tier2.pdbqt` — CRBN+GSPT1 ternary receptor (Tier 2); used to score neosubstrate cooperativity
@@ -42,7 +42,7 @@ Models:
 - `./docking_gnina/crystal_85C.pdb` — reference CC-885 native pose; used to validate the anchored approach recovers the crystal geometry
 
 Datasets:
-- `./pre-processing/test-data/Enamine_CRBN_Molecular_Glue_Library_..._4560cmpds_*.smiles` — purchasable scaffold library (potential glues, not validated degraders); used as known+ positives in this entry; superseded by the curated `CRBN_GSPT1_Glues.csv` in entry 003
+- `./research/preprocessing/test-data/Enamine_CRBN_Molecular_Glue_Library_..._4560cmpds_*.smiles` — purchasable scaffold library (potential glues, not validated degraders); used as known+ positives in this entry; superseded by the curated `CRBN_GSPT1_Glues.csv` in entry 003
 
 Results:
 - `./docking_gnina/batch_results_passB.csv` — known-glue docking scores, Pass B (validated pipeline)
@@ -71,7 +71,7 @@ Relevant commit: `106a4e6` — CRBN anchored-docking scripts (`anchor_dock.py`, 
 
 ## Method
 
-1. **Structure prep** — `pre-processing/clean.py` carves 5HXB copy 1: `models/5HXB_tier1_CRBN.pdb` (CRBN only), `models/5HXB_tier2_CRBN_GSPT1.pdb` (CRBN+GSPT1). Zn retained, CC-885 removed. Receptors → pdbqt via `obabel ... -xr -p 7.4`.
+1. **Structure prep** — `research/preprocessing/clean.py` carves 5HXB copy 1: `models/5HXB_tier1_CRBN.pdb` (CRBN only), `models/5HXB_tier2_CRBN_GSPT1.pdb` (CRBN+GSPT1). Zn retained, CC-885 removed. Receptors → pdbqt via `obabel ... -xr -p 7.4`.
 
 2. **Sampling failure (blind docking)** — Blind docking with Vina, gnina, and gnina with exhaustiveness 64 + CNN never samples CC-885's deep tri-Trp-cage pose (top score ~−8 kcal/mol, CNN ~0.5; all displaced from native). Native pose minimizes in place to −13.8 / CNN 0.98 — sampling failure, not scoring failure.
 

@@ -1,0 +1,15 @@
+{
+  "cost_units": "scent_small (unitless, relative price)",
+  "created": "2026-07-02",
+  "default_cost": 1.0,
+  "default_yield": 0.5,
+  "fragments_sha256": "2900718f4fed774c332c757c9af7822ed6489e0b54caba76e018e2eb054be646",
+  "n_fragments": 418,
+  "n_fragments_priced": 418,
+  "n_reactions": 112,
+  "n_reactions_with_yield": 112,
+  "name": "glue_standard_v1",
+  "reactions_sha256": "602df15c762d115f08e309439e9f3e76cfa62c8e1320dead6a8c268bff3b4d66",
+  "source": "external/scent/data/small (fragments.txt + fragment_to_real_cost.json + templates.txt + templates_yields.csv)",
+  "version": "1.0"
+}

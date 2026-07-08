@@ -30,25 +30,25 @@ This entry provides the first validated oracle for the RGFN pipeline. For NeurIP
 ## Relevant Files
 
 Scripts:
-- `./pre-processing/clean_6td3.py` — carves 6TD3 copy 1 into Tier 1 (CDK12), Tier 2 (CDK12+DDB1), and Tier 3 (+cyclinK) receptor structures; extracts native CR8 pose
-- `./pre-processing/docking_6td3/redock_cr8.py` — blind-redocks CR8, minimizes native pose in-place, computes Tier 1 and Tier 2 scores for native pose validation
-- `./pre-processing/docking_6td3/make_decoys_cdk.py` — generates purine-armed decoys (CDK12 ATP-hinge warhead + random drug-like arm)
-- `./pre-processing/docking_6td3/dock_cluster.py` — batched multi-GPU box-docking driver; docks Tier 2, selects best-CNN pose, scores that pose against Tier 1 for the differential
-- `./pre-processing/docking_6td3/submit_dock_6td3.sh` — Slurm submission script for Balam debug_full_node (job 69271)
-- `./pre-processing/compare_systems.py` — prints known-vs-decoy discrimination metrics for each system and cross-system
+- `./research/preprocessing/clean_6td3.py` — carves 6TD3 copy 1 into Tier 1 (CDK12), Tier 2 (CDK12+DDB1), and Tier 3 (+cyclinK) receptor structures; extracts native CR8 pose
+- `./research/preprocessing/docking_6td3/redock_cr8.py` — blind-redocks CR8, minimizes native pose in-place, computes Tier 1 and Tier 2 scores for native pose validation
+- `./research/preprocessing/docking_6td3/make_decoys_cdk.py` — generates purine-armed decoys (CDK12 ATP-hinge warhead + random drug-like arm)
+- `./research/preprocessing/docking_6td3/dock_cluster.py` — batched multi-GPU box-docking driver; docks Tier 2, selects best-CNN pose, scores that pose against Tier 1 for the differential
+- `./research/preprocessing/docking_6td3/submit_dock_6td3.sh` — Slurm submission script for Balam debug_full_node (job 69271)
+- `./research/preprocessing/compare_systems.py` — prints known-vs-decoy discrimination metrics for each system and cross-system
 
 Models:
-- `./pre-processing/docking_6td3/6TD3_tier1.pdbqt` — CDK12 alone (Tier 1); used to score baseline pocket binding without DDB1
-- `./pre-processing/docking_6td3/6TD3_tier2.pdbqt` — CDK12+DDB1 (Tier 2); the docking target for the discrimination run
-- `./pre-processing/docking_6td3/crystal_RC8.pdb` — native CR8 pose; used as the autobox ligand and as the redocking validation target
+- `./research/preprocessing/docking_6td3/6TD3_tier1.pdbqt` — CDK12 alone (Tier 1); used to score baseline pocket binding without DDB1
+- `./research/preprocessing/docking_6td3/6TD3_tier2.pdbqt` — CDK12+DDB1 (Tier 2); the docking target for the discrimination run
+- `./research/preprocessing/docking_6td3/crystal_RC8.pdb` — native CR8 pose; used as the autobox ligand and as the redocking validation target
 - `./models/6TD3_tier1_CDK12.pdb`, `./models/6TD3_tier2_CDK12_DDB1.pdb` — source PDB files before pdbqt conversion
 
 Datasets:
-- `./pre-processing/test-data/DDB1_CDK12_Glues.csv` — 175 real CDK12-CCNK/DDB1 glues (161 unique, 123 purine-based); known+ positives for discrimination run (160 docked)
+- `./research/preprocessing/test-data/DDB1_CDK12_Glues.csv` — 175 real CDK12-CCNK/DDB1 glues (161 unique, 123 purine-based); known+ positives for discrimination run (160 docked)
 
 Results:
-- `./pre-processing/docking_6td3/known_results.csv` — per-molecule docking scores for known glues (job 69271)
-- `./pre-processing/docking_6td3/decoy_cdk_results.csv` — per-molecule docking scores for decoys (job 69271)
+- `./research/preprocessing/docking_6td3/known_results.csv` — per-molecule docking scores for known glues (job 69271)
+- `./research/preprocessing/docking_6td3/decoy_cdk_results.csv` — per-molecule docking scores for decoys (job 69271)
 
 Job Logs:
 - `/scratch/markymoo/rgfn_runs/dock_6td3_69271/` — full per-shard output directory (Balam scratch)
@@ -75,7 +75,7 @@ Relevant commit: `106a4e6` — 6TD3 docking scripts (`clean_6td3.py`, `redock_cr
 
 ## Method
 
-1. **Structure prep** — `pre-processing/clean_6td3.py` carves 6TD3 copy 1: `models/6TD3_tier1_CDK12.pdb` (CDK12 only), `models/6TD3_tier2_CDK12_DDB1.pdb` (CDK12+DDB1), optional Tier 3 (+cyclinK); native CR8 extracted to `crystal_RC8.pdb`. Receptors → pdbqt via obabel.
+1. **Structure prep** — `research/preprocessing/clean_6td3.py` carves 6TD3 copy 1: `models/6TD3_tier1_CDK12.pdb` (CDK12 only), `models/6TD3_tier2_CDK12_DDB1.pdb` (CDK12+DDB1), optional Tier 3 (+cyclinK); native CR8 extracted to `crystal_RC8.pdb`. Receptors → pdbqt via obabel.
 
 2. **Validation** — `docking_6td3/redock_cr8.py`: blind-redock CR8 with autobox on crystal pose (`--autobox_ligand crystal_RC8.pdb --autobox_add 4`). Confirm native-pose recovery. Score native pose against Tier 1 and Tier 2 to verify DDB1 cooperativity is captured.
 

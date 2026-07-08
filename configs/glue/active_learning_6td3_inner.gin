@@ -1,0 +1,68 @@
+# Single-round "does the inner GFN actually learn?" run on the 6TD3 oracle (Balam).
+#
+# One AL round: fit proxy M on the 408 seed labels, train the GFN ~150 iterations
+# against M's reward, sample a 16-molecule query batch, and dock it with the real
+# two-tier gnina oracle. Purpose: confirm the full reward -> GFN -> oracle pipeline
+# runs end-to-end on Balam and that the inner GFN reward climbs over iterations
+# (the fundamental learning sanity check). Cross-round AL gain needs >1 round; see
+# active_learning_6td3_mini.gin (3 rounds) and active_learning_6td3.gin (full).
+#
+# Sized for the shared login node while compute is down: ~150*10s (GFN) + 16*12s
+# (dock) ~= 30 min. Run with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_6td3_inner.gin --seed 42
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN. -------------------------------------
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedGlueProxy.higher_is_better = False
+LearnedGlueProxy.max_epochs = 100
+LearnedGlueProxy.patience = 10
+LearnedGlueProxy.batch_size = 128
+LearnedGlueProxy.lr = 5e-4
+
+# --- Metrics. -----------------------------------------------------------------
+# Swap upstream @NumScaffoldsFound (crashes on early-terminated trajectories — it
+# reads state.molecule unconditionally; every sibling metric guards this) for our
+# crash-safe @SafeNumScaffoldsFound, oriented for the lower-is-better Vina
+# differential (seed mean -1.25 / std 0.90).
+SafeNumScaffoldsFound.proxy_value_threshold_list = [-2.0, -2.5, -3.0, -3.5]
+SafeNumScaffoldsFound.proxy_component_name = None
+SafeNumScaffoldsFound.proxy_higher_better = False
+train_metrics = [@StandardGFNMetrics(), @SafeNumScaffoldsFound(), @UniqueMolecules(), @AllMolecules(), @FractionEarlyTerminate(), @QED(), @TanimotoSimilarityModes()]
+Trainer.train_metrics = %train_metrics
+
+# --- Inner GFN budget. --------------------------------------------------------
+Trainer.n_iterations = 150
+# Validation sampler/metrics are not wired into Trainer in rgfn_base.gin (as in
+# active_learning_mock.gin), so skip mid-run validation; the per-iteration train
+# metrics (mean reward, loss) carry the improvement signal.
+Trainer.valid_every_n_iterations = 100000
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: expensive two-tier 6TD3 docking. ------------------------------
+Docking6TD3Oracle.exhaustiveness = 16
+Docking6TD3Oracle.num_modes = 9
+oracle/gin.singleton.constructor = @Docking6TD3Oracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0: 408 validated docking labels. -------------------------
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/6td3/seed_6td3.csv'
+OracleLabeledDataset.label_column = 'label'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- Outer loop: a single round. ---------------------------------------------
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 1
+ActiveLearningLoop.query_batch_size = 16
+ActiveLearningLoop.top_k = 16

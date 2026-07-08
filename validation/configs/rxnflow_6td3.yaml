@@ -1,0 +1,75 @@
+# RxnFlow baseline on 6TD3 — the SYNTHESIZABLE peer for the RGFN entrant.
+#
+# Budget held IDENTICAL to configs/glue/active_learning_6td3_gpu.gin (the RGFN run)
+# so the comparison is apples-to-apples: same oracle (Docking6TD3GpuOracle, same
+# knobs), same seed D_0 (experiments/active_learning/6td3/seed_6td3.csv), same
+# rounds/batch/top-k, same β, same proxy M (Bengio-2021 atom-graph MPNN). Only the
+# GENERATOR differs: RxnFlow's reaction-template + building-block synthesis GFlowNet
+# (carries a synthesis route -> has_route=1) instead of RGFN's reaction DAG. This is
+# the synthesizable-vs-synthesizable head-to-head (FragGFN is the non-synth foil).
+#
+# Run (from repo root, rxnflow env; the bridge subprocess uses the rgfn env):
+#   conda run -n rxnflow python validation/generators/rxnflow/run_rxnflow_al.py \
+#       --cfg validation/configs/rxnflow_6td3.yaml \
+#       --seed-csv experiments/active_learning/6td3/seed_6td3.csv \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+# See experiments/active_learning/rxnflow_6td3/submit_rxnflow_6td3.sh.
+
+run:
+  name: active_learning/rxnflow_6td3   # run dir: <root>/active_learning/rxnflow_6td3/<timestamp>
+  root_dir: experiments               # overridden by --root-dir on Balam ($SCRATCH)
+
+loop:
+  n_rounds: 3                 # == active_learning_6td3_gpu.gin ActiveLearningLoop.n_rounds
+  n_train_steps: 300          # == Trainer.n_iterations (inner GFN budget / round)
+  query_batch_size: 32        # == ActiveLearningLoop.query_batch_size
+  sample_oversample: 4.0      # == ActiveLearningLoop.sample_oversample
+  top_k: 16                   # == ActiveLearningLoop.top_k
+  beta: 8                     # == beta (fixed inverse temperature)
+  system: 6td3
+  seed: 42
+  seed_csv: experiments/active_learning/6td3/seed_6td3.csv
+  smiles_column: smiles
+  label_column: label
+  oracle_threshold: -2.0      # the 6TD3 "good glue" dvina cutoff (Logs/006/011)
+
+# Proxy M — same architecture/hyperparams as glue.proxies.LearnedGlueProxy in the
+# RGFN config (Bengio-2021 atom-graph MPNN, fit from scratch each round).
+proxy:
+  dim: 64
+  num_conv_steps: 12
+  lr: 5.0e-4
+  batch_size: 128
+  max_epochs: 100
+  patience: 10
+  val_fraction: 0.1
+  clip: 10.0
+
+# RxnFlow synthesis-GFlowNet generator hyperparams. env_dir is the prepared building
+# blocks + reaction templates (external/setup_rxnflow.sh writes it). The RGFN-specific
+# knobs live in the gin base — these are the RxnFlow equivalents.
+rxnflow:
+  env_dir: data/models/rxnflow_env   # prepared blocks + 109 real.txt templates (setup_rxnflow.sh)
+  max_reactions: 3                   # synthesis depth == RxnFlow default max_len (Logs/016)
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 50
+  action_sampling_ratio: 0.02        # action-space subsampling (RxnFlow opt_qed/unidock default)
+  # device: auto (cuda if available)
+
+# Shared docking oracle, invoked across the env boundary by scripts/score_batch.py
+# under the rgfn env. `args` MUST match Docking6TD3GpuOracle.* in
+# configs/glue/active_learning_6td3_gpu.gin so both entrants see the same oracle.
+oracle:
+  env: rgfn
+  conda_exe: conda
+  script: scripts/score_batch.py
+  name: docking_6td3_gpu
+  higher_is_better: false      # dvina differential: more negative = better
+  args:
+    exhaustiveness: 8000
+    num_modes: 9
+    docking_batch_size: 25
+    n_gpu: 1

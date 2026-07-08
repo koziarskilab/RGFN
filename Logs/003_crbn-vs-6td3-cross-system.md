@@ -32,15 +32,15 @@ NeurIPS reviewers will ask whether our system selection was principled or cherry
 Scripts:
 - `./docking_gnina/dock_cluster_crbn.py` — batched warhead-anchored docking for CRBN (job 69272): builds 100 flexible-anchor confs/mol → gnina `--minimize` vs Tier 2 (CRBN+GSPT1) → best clash-aware pose → `--score_only` vs Tier 1 (CRBN) → GSPT1 differential; sharded 16 workers / 4 GPUs with per-shard CSV checkpoints
 - `./docking_gnina/submit_dock_crbn.sh` — Slurm submission script for Balam debug_full_node (job 69272)
-- `./pre-processing/compare_systems.py` — prints both systems' known-vs-decoy distributions and known−decoy gap on the differential; cross-system summary table
+- `./research/preprocessing/compare_systems.py` — prints both systems' known-vs-decoy distributions and known−decoy gap on the differential; cross-system summary table
 
 Models:
 - `./docking_gnina/5HXB_tier2.pdbqt` — CRBN+GSPT1 ternary receptor (Tier 2); docking target for CRBN run
 - `./docking_gnina/5HXB_tier1_CRBN.pdbqt` — CRBN pocket alone (Tier 1); used for `--score_only` differential
-- `./pre-processing/docking_6td3/6TD3_tier1.pdbqt`, `6TD3_tier2.pdbqt` — CDK12-DDB1 receptors; 6TD3 results reused from entry 002 (job 69271)
+- `./research/preprocessing/docking_6td3/6TD3_tier1.pdbqt`, `6TD3_tier2.pdbqt` — CDK12-DDB1 receptors; 6TD3 results reused from entry 002 (job 69271)
 
 Datasets:
-- `./pre-processing/test-data/CRBN_GSPT1_Glues.csv` — 200 real CRBN/GSPT1 validated degraders (199 active, 188 glutarimide-bearing, 177 unique anchorable); replaces the earlier purchasable scaffold library used in entry 001
+- `./research/preprocessing/test-data/CRBN_GSPT1_Glues.csv` — 200 real CRBN/GSPT1 validated degraders (199 active, 188 glutarimide-bearing, 177 unique anchorable); replaces the earlier purchasable scaffold library used in entry 001
 - `./docking_gnina/decoys.smiles` — 260 glutarimide-bearing decoys (same decoy set as entry 001)
 
 Results:
@@ -78,7 +78,7 @@ Relevant commit: `106a4e6` — `dock_cluster_crbn.py`, `compare_systems.py`, and
 
 2. **6TD3 result** — reused from entry 002 (job 69271). No re-run.
 
-3. **Cross-system comparison** — `pre-processing/compare_systems.py`: prints both systems' known-vs-decoy distributions and known−decoy gap on the differential.
+3. **Cross-system comparison** — `research/preprocessing/compare_systems.py`: prints both systems' known-vs-decoy distributions and known−decoy gap on the differential.
 
 ## Results
 

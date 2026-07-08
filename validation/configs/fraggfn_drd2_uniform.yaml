@@ -1,0 +1,47 @@
+# FragGFN DRD2 — EXPLORATION DIAGNOSTIC (Logs/019), NOT a matched four-way entry.
+#
+# The matched four-way FragGFN-DRD2 run (fraggfn_drd2_fixed.yaml, constant β=48) flatlined
+# at the random DRD2 base rate — it never discovered active chemistry, while the three
+# building-block/reaction generators (also at constant β=48) reached ~0.8-0.9. Hypothesis:
+# constant β removes gflownet's native temperature-annealed exploration (its stock FragGFN
+# task uses uniform β∈[0,64]), and on a SPARSE target like DRD2 that prevents the fragment
+# generator from ever finding the active mode. This run tests that: identical to
+# fraggfn_drd2_fixed.yaml EXCEPT the temperature is uniform[0,64] (β sampled per-trajectory),
+# with the final batch sampled at the exploitation β. If reward now climbs, the four-way
+# failure was the fixed-β regime; if it still flatlines, it's a genuine fragment-prior limit.
+
+run:
+  name: fixed_reward/fraggfn_drd2_uniform   # separate run dir — kept OUT of the matched four-way
+  root_dir: experiments
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 5000
+  n_samples: 1000
+  sample_oversample: 4.0
+  top_k: 100
+  beta: 48                    # ignored for training when temperature.mode=uniform; kept for provenance
+  system: drd2
+  reward_name: drd2
+  score_units: "drd2_tdc_activity (higher is better; 0-1)"
+
+# Temperature-annealed exploration (gflownet's native FragGFN setting), the one knob that
+# differs from the matched run.
+temperature:
+  mode: uniform
+  low: 0.0
+  high: 64.0
+  sample_beta: 64.0           # condition the final (candidate) batch at this exploitation β
+
+reward:
+  type: drd2
+  model_path: /home/markymoo/projects/RGFN_Fork/RGFN-Fork/oracle/drd2_current.pkl
+  clip: 10.0
+
+gflownet:
+  max_nodes: 9
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 100

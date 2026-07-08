@@ -24,7 +24,7 @@ call.
 ```
 
 **Why:** on Balam we run wandb in offline mode with cache/dir env vars
-(`WANDB_DIR`, etc., set in `scripts/hpc/submit.sh`). Passing `dir=self.logdir`
+(`WANDB_DIR`, etc., set in `scripts/submit.sh`). Passing `dir=self.logdir`
 conflicted with that setup.
 
 **Status:** kept as a one-line patch (intentionally not refactored into a `glue/`

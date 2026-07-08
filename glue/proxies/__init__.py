@@ -15,5 +15,7 @@ Nothing here should require editing `rgfn/`.
 """
 
 from glue.proxies.example_glue_proxy import ExampleGlueProxy  # noqa: F401
+from glue.proxies.learned_proxy import LearnedGlueProxy  # noqa: F401
+from glue.proxies.oracle_reward_proxy import OracleRewardProxy  # noqa: F401
 
-__all__ = ["ExampleGlueProxy"]
+__all__ = ["ExampleGlueProxy", "LearnedGlueProxy", "OracleRewardProxy"]

@@ -1,0 +1,89 @@
+# RGFN active-learning loop with a real sEH GPU-docking oracle (Balam).
+#
+# Implements [bengio2021gflownet] Alg. 1 for the sEH benchmark. The structure is
+# the active-learning restructuring of upstream's configs/rgfn_seh_docking.gin:
+#   - in-loop reward = the cheap learned MPNN proxy M (LearnedGlueProxy), called
+#     millions of times by RGFN;
+#   - expensive oracle O = real QuickVina2-GPU docking against sEH
+#     (DockingSEHOracle), queried only on the per-round query batch.
+# So docking is NEVER in the inner loop -> the GFN trains on the plain `reaction`
+# env, not `reaction_docking`. This is the whole point of the AL setup: keep the
+# slow docking out of the hot path and let the MPNN approximate it between rounds.
+#
+# Requires a GPU + the QuickVina2-GPU-2.1 build (quickvina_dir symlink), its boost
+# libs on LD_LIBRARY_PATH, and data/targets/sEH.pdbqt => Balam (login or compute).
+# Generate the seed D_0 first with experiments/active_learning/seh/make_seh_seed.py, then run:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_seh.gin --seed 42
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN (Bengio2021 / RGFN MPNNet). -----------
+# Shared singleton: same instance for the GFN reward and the AL loop.
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+# The oracle label is a Vina binding energy (kcal/mol): more negative = better.
+# The proxy's sign MUST match the oracle (the loop asserts this).
+LearnedGlueProxy.higher_is_better = False
+# Proxy-fit budget per round (validate/tune on Balam).
+LearnedGlueProxy.max_epochs = 100
+LearnedGlueProxy.patience = 10
+LearnedGlueProxy.batch_size = 128
+LearnedGlueProxy.lr = 5e-4
+
+# --- Metrics (mirrors active_learning_6td3_gpu.gin; sEH-appropriate thresholds). -
+# rgfn_base.gin's default @NumScaffoldsFound uses POSITIVE thresholds [5,6,7,8],
+# which assume the upstream SehMoleculeProxy's clipped non-negative reward. OUR
+# proxy M (LearnedGlueProxy) instead predicts the RAW Vina energy (negative; lower
+# is better), so those thresholds are never met and the scaffold metric is inert.
+# Swap in @SafeNumScaffoldsFound with proxy_higher_better=False and Vina-scale
+# cutoffs grounded in the seed D_0 distribution (median -7.0, Q1 -8.4, strong
+# binders <= -10 kcal/mol; see experiments/active_learning/seh/seed_seh.csv).
+SafeNumScaffoldsFound.proxy_value_threshold_list = [-8.0, -9.0, -10.0, -11.0]
+SafeNumScaffoldsFound.proxy_component_name = None
+SafeNumScaffoldsFound.proxy_higher_better = False
+train_metrics = [@StandardGFNMetrics(), @SafeNumScaffoldsFound(), @UniqueMolecules(), @AllMolecules(), @FractionEarlyTerminate(), @QED(), @TanimotoSimilarityModes()]
+Trainer.train_metrics = %train_metrics
+
+# --- Inner GFN budget per round. ----------------------------------------------
+# Paper uses "fewer iterations when fitting the generative model" in the
+# multi-round setting; the neural proxy is cheap so this can be sizeable. Start
+# modest and tune on Balam.
+Trainer.n_iterations = 1000
+Trainer.valid_every_n_iterations = 100000   # skip mid-run validation; the AL loop drives evaluation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: real sEH GPU docking (QuickVina2-GPU-2.1, exactly as upstream). -
+# qv_dir defaults to the repo `quickvina_dir` symlink; box centre/size for sEH come
+# from upstream DockingMoleculeProxy's receptor tables. exhaustiveness=8000 is the
+# upstream default (~4 s/mol on an A100; validated on balam-login01).
+DockingSEHOracle.receptor_name = 'sEH'
+DockingSEHOracle.vina_mode = 'QuickVina2'
+DockingSEHOracle.exhaustiveness = 8000
+DockingSEHOracle.docking_batch_size = 25
+DockingSEHOracle.n_conformers = 1
+oracle/gin.singleton.constructor = @DockingSEHOracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0: sEH Vina labels for RGFN-generated molecules. -----------
+# Generate with: python experiments/active_learning/seh/make_seh_seed.py --cfg <this file> --n 300
+# Column 'label' holds the QuickVina2-GPU sEH binding energy (kcal/mol).
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/seh/seed_seh.csv'
+OracleLabeledDataset.label_column = 'label'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- The outer active-learning loop. ------------------------------------------
+# query_batch_size=200 mirrors the molecule-domain run in [bengio2021gflownet] A.5.2.
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 5
+ActiveLearningLoop.query_batch_size = 200
+ActiveLearningLoop.top_k = 100
+ActiveLearningLoop.system = 'seh'   # suggestion-log manifest provenance (seed is bound from --seed)

@@ -30,7 +30,7 @@ repeat. The novel piece is **the oracle itself** — a two-tier, same-pose docki
 differential that scores whether a candidate's *arm* recruits the second protein of the
 ternary complex. Code: the generator lives in RGFN's `rgfn/gfns/reaction_gfn/`; our
 oracle/proxy/sampler code lives in the `glue/` package and plugs into RGFN's reward
-interface; configs in `configs/glue/`. See `RESEARCH_CONTEXT.md` for the full picture.
+interface; configs in `configs/glue/`. See `docs/RESEARCH_CONTEXT.md` for the full picture.
 
 ---
 
@@ -50,7 +50,7 @@ The original **GFlowNet**. Two ideas to internalize:
    AutoDock scores, refit on ~200 freshly docked molecules per round — the direct template
    for our setup, with our docking differential in the role of `O`. **`O` scores enter only
    by retraining `M`, never as a direct RGFN reward.** Full pseudocode is transcribed in
-   `RESEARCH_CONTEXT.md` ("How the model learns"). &nbsp;`pdfs/bengio2021gflownet.pdf` · arXiv:2106.04399
+   `docs/RESEARCH_CONTEXT.md` ("How the model learns"). &nbsp;`pdfs/bengio2021gflownet.pdf` · arXiv:2106.04399
 
 ### `[koziarski2024rgfn]` — RGFN: Synthesizable Molecular Generation (NeurIPS 2024)
 **The paper this whole fork builds on.** RGFN = Reaction-GFlowNet: instead of growing a
@@ -60,6 +60,80 @@ The entire `rgfn/gfns/reaction_gfn/` package implements this; `data/chemistry.xl
 building-block/reaction library; our `glue/` oracles plug into its proxy/reward interface.
 When extending the model, "does this match RGFN?" is answered here.
 &nbsp;`pdfs/koziarski2024rgfn.pdf` · arXiv:2406.08506
+
+### `[malkin2022trajectorybalance]` — Trajectory Balance: Improved Credit Assignment in GFlowNets (NeurIPS 2022)
+**The GFlowNet training objective RGFN actually optimizes** (`configs/objectives/trajectory_balance.gin`
+→ `@TrajectoryBalanceObjective`). TB learns the forward policy `P_F`, backward policy `P_B`, and a
+single **global** scalar `Z = F(s0)` (the `logZ` parameter) by matching, over each complete
+trajectory, `Z·∏P_F = R(x)·∏P_B` (their Eq. 13; Prop. 1 proves a global minimizer samples ∝ reward).
+Crucially it learns **no per-state flow `F(s)`** — unlike flow-matching/detailed-balance — which is why
+`glue/analysis/` estimates a hub's flow by forward-sampling visit count *and* recovers it from the
+balance condition as `F(h)=R(x)·P_B(h|x)/P_F(x|h)` (`glue/analysis/tb_flow.py`; the two are the
+`Z·∏P_F` and `R·∏P_B` sides of the TB loss, so their agreement is a training-quality check).
+&nbsp;`pdfs/malkin2022trajectorybalance.pdf` · arXiv:2201.13259
+
+---
+
+## Baselines — what we compare against
+
+### `[seo2024rxnflow]` — RxnFlow: Generative Flows on Synthetic Pathway for Drug Design (2024, ICLR 2025)
+Our primary **synthesis-aware** baseline — the synthesizable peer to RGFN (FragGFN
+is the *non*-synthesizable foil). Like RGFN, RxnFlow is a GFlowNet that assembles
+molecules along a **synthetic pathway** — picking a building block, then applying a
+**reaction template** to a chosen reactant — so every sampled molecule carries a
+forward-synthesis route. Its headline contribution is an **action-space subsampling**
+trick that lets it learn over a huge action space (~1.2M building blocks × 71
+reaction templates) without retraining when the library changes. It is built on
+Recursion's `gflownet` (bundled, v0.2.0) — the *same* base as our FragGFN entrant —
+so it drops into the same two-env pattern. We run it through the **same**
+active-learning loop, the **same** 6TD3 docking oracle, the **same** seed/budget/β,
+and the **same** proxy `M` as the RGFN entrant, so the comparison isolates the
+generator. The standard candidate dataset records its routes (`has_route=1`,
+`routes.jsonl`) — the differentiator vs. FragGFN. Heavy upstream code is installed
+via `external/setup_rxnflow.sh` (not vendored); the thin adapter lives in
+`validation/generators/rxnflow/`. &nbsp;`pdfs/seo2024rxnflow.pdf` · arXiv:2410.04542
+
+### `[gainski2025scent]` — SCENT: Scalable and Cost-Efficient de Novo Template-Based Molecular Generation (2025)
+Our **cost-aware** baseline — and the closest relative of all of them: SCENT is a
+**fork of RGFN from the same lab** (its package is literally named `rgfn`; same
+stack — py3.11/torch2.3/dgl/gin — same `rgfn.api`, same `train.py --cfg ….gin`),
+so RGFN is one of *its* own baselines. It keeps RGFN's reaction-template,
+synthesizable action space and adds three things on top: **Recursive Cost Guidance**
+(auxiliary models that estimate synthesis cost from building-block prices + reaction
+yields, steering the backward policy toward cheap routes), an **Exploitation Penalty**
+(visitation-count term that keeps cost guidance from collapsing diversity), and a
+**Dynamic Library** (promotes high-value intermediates to building blocks, enabling
+tree-structured routes). Because the package name `rgfn` collides with ours, it runs
+in its **own `scent` conda env** and reaches the shared 6TD3 oracle across the env
+boundary via `scripts/score_batch.py` — the *same* two-env bridge pattern as FragGFN
+/ RxnFlow, just forced by a namespace clash rather than a version clash. We run it
+through the **same** active-learning loop, oracle, seed/budget/β, and proxy `M` as the
+RGFN entrant, so the comparison isolates what SCENT's cost-awareness buys. It is
+synthesizable (`has_route=1`, `routes.jsonl`). Heavy upstream code installed via
+`external/setup_scent.sh` (not vendored); thin adapter in
+`validation/generators/scent/`. &nbsp;`pdfs/gainski2025scent.pdf` · arXiv:2506.19865
+
+---
+
+## Evaluation — synthesizability metrics
+
+### `[genheden2020aizynth]` — AiZynthFinder: a fast, robust retrosynthesis tool
+The retrosynthesis engine behind the **synthesizability metric we report on every
+entrant** (`validation/harness/synthesizability.py`). Given a target SMILES it runs a
+Monte-Carlo-tree search over USPTO reaction templates back toward a **building-block
+stock** (we use the standard public ZINC in-stock set); a molecule is **"solved"** iff a
+full route to in-stock precursors is found. The headline number is the **fraction
+solved** ("AiZynth success rate") — exactly the `AiZynth` column in `[koziarski2024rgfn]`
+Table 1 (RGFN ≈ 0.56) and `[gainski2025scent]` Table 1 (up to ≈ 0.75), and RxnFlow's
+"Synthesizability %" (`[seo2024rxnflow]`). Note these papers stress it is **noisy and
+conservative** (RGFN molecules an expert confirmed synthesizable score below 1.0), so it
+is a *post-hoc validation* metric, never an in-loop reward. Installed in its own
+`aizynth` conda env via `external/setup_aizynthfinder.sh`. &nbsp;DOI:10.1186/s13321-020-00472-1
+
+### `[ertl2009sascore]` — Synthetic Accessibility (SA) score
+The cheap, RDKit-native companion to AiZynth that the same papers also report (a 1 = easy
+… 10 = hard heuristic from fragment contributions + complexity penalties). We compute it
+alongside the AiZynth verdict in the same evaluator. &nbsp;DOI:10.1186/1758-2946-1-8
 
 ---
 

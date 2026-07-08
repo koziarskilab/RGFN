@@ -1,0 +1,71 @@
+# GPU-oracle 6TD3 active-learning run (Balam) — successor to the entry-012 baseline.
+#
+# Byte-for-byte the same loop as active_learning_6td3_mini.gin (3 rounds, 300 GFN
+# steps/round, 32-molecule query batch, beta=8, top-k=16) EXCEPT the oracle: the
+# CPU two-tier gnina oracle (@Docking6TD3Oracle) is swapped for its GPU sibling
+# (@Docking6TD3GpuOracle), which runs the Tier-2 conformational search on
+# QuickVina2-GPU and keeps the gnina CNN pose-pick + both --score_only tiers
+# (Logs/013: ~60x faster, AUROC ~0.88 vs the CPU 0.948). Holding every other knob
+# fixed makes this a clean diff against entry-012 (job 69451): same generator
+# budget, same dataset, only the oracle's pose source changes.
+#
+# This run also exercises the new per-round suggestion log (molecules + synthesis
+# routes + diversity/medchem metrics) — written automatically to
+#   <run>/active_learning/suggestions/  by the loop (SuggestionLog).
+#
+# Run with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_6td3_gpu.gin --seed 42
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN. -------------------------------------
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedGlueProxy.higher_is_better = False
+LearnedGlueProxy.max_epochs = 100
+LearnedGlueProxy.patience = 10
+LearnedGlueProxy.batch_size = 128
+LearnedGlueProxy.lr = 5e-4
+
+# --- Metrics (identical to the mini baseline). -------------------------------
+SafeNumScaffoldsFound.proxy_value_threshold_list = [-2.0, -2.5, -3.0, -3.5]
+SafeNumScaffoldsFound.proxy_component_name = None
+SafeNumScaffoldsFound.proxy_higher_better = False
+train_metrics = [@StandardGFNMetrics(), @SafeNumScaffoldsFound(), @UniqueMolecules(), @AllMolecules(), @FractionEarlyTerminate(), @QED(), @TanimotoSimilarityModes()]
+Trainer.train_metrics = %train_metrics
+
+# --- Inner GFN budget per round (same as mini). ------------------------------
+Trainer.n_iterations = 300
+Trainer.valid_every_n_iterations = 100000   # skip mid-run validation in the probe
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: GPU two-tier 6TD3 differential (QuickVina2-GPU search). --------
+# num_modes=9 matches the entry-006/mini gnina setting; exhaustiveness here is the
+# QuickVina2-GPU thread count (its search-effort knob), not gnina's 16.
+Docking6TD3GpuOracle.exhaustiveness = 8000
+Docking6TD3GpuOracle.num_modes = 9
+Docking6TD3GpuOracle.docking_batch_size = 25
+Docking6TD3GpuOracle.n_gpu = 1
+oracle/gin.singleton.constructor = @Docking6TD3GpuOracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0: 408 validated docking labels (same as mini). ----------
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/6td3/seed_6td3.csv'
+OracleLabeledDataset.label_column = 'label'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- Outer active-learning loop (same sizing as mini). -----------------------
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 3
+ActiveLearningLoop.query_batch_size = 32
+ActiveLearningLoop.top_k = 16
+ActiveLearningLoop.system = '6td3'   # suggestion-log manifest provenance (seed is bound from --seed)

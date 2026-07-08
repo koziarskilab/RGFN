@@ -1,0 +1,48 @@
+# Local CPU smoke test of the active-learning loop (no gnina / no GPU).
+#
+# Exercises the full Algorithm-1 wiring (seed -> fit M -> train RGFN -> sample
+# batch -> score with O -> refit -> repeat) with a cheap MockGlueOracle, so the
+# plumbing can be validated on a laptop. Swap in active_learning_6td3.gin for the
+# real Balam run. Run with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_mock.gin
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction.gin'
+
+beta = 8
+
+# --- Proxy M: trainable atom-graph MPNN (Bengio2021 / RGFN MPNNet). -----------
+# ONE shared singleton used by BOTH the GFN reward and the AL loop, so refitting
+# it in the loop updates the reward RGFN trains against.
+proxy/gin.singleton.constructor = @LearnedGlueProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+LearnedGlueProxy.max_epochs = 20
+LearnedGlueProxy.patience = 5
+LearnedGlueProxy.batch_size = 32
+
+# --- Inner GFN budget per round (tiny for a smoke test). ----------------------
+Trainer.n_iterations = 5
+Trainer.train_forward_n_trajectories = 8
+Trainer.train_replay_n_trajectories = 4
+Trainer.valid_every_n_iterations = 1000   # effectively skip mid-run validation
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+
+# --- Oracle O: cheap CPU mock. ------------------------------------------------
+oracle/gin.singleton.constructor = @MockGlueOracle
+oracle = @oracle/gin.singleton()
+
+# --- Seed dataset D_0. --------------------------------------------------------
+OracleLabeledDataset.seed_csv = 'experiments/active_learning/mock/seed_mock.csv'
+dataset/gin.singleton.constructor = @OracleLabeledDataset
+dataset = @dataset/gin.singleton()
+
+# --- The outer active-learning loop. ------------------------------------------
+ActiveLearningLoop.trainer = %trainer
+ActiveLearningLoop.proxy = %train_proxy
+ActiveLearningLoop.oracle = %oracle
+ActiveLearningLoop.dataset = %dataset
+ActiveLearningLoop.n_rounds = 2
+ActiveLearningLoop.query_batch_size = 16
+ActiveLearningLoop.top_k = 10

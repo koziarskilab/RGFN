@@ -1,0 +1,77 @@
+# RxnFlow baseline on sEH — the SYNTHESIZABLE peer for the RGFN entrant.
+#
+# The sEH analogue of rxnflow_6td3.yaml. sEH is the classic GFlowNet benchmark
+# target ([bengio2021gflownet] / RGFN's configs/rgfn_seh_docking.gin); running the
+# synthesizable peer against it validates the harness on a well-known result before
+# the novel 6TD3 glue task. Budget held IDENTICAL to the RGFN sEH run
+# (configs/glue/active_learning_seh.gin): same oracle (DockingSEHOracle ==
+# docking_seh, same knobs), same seed D_0 (experiments/active_learning/seh/seed_seh.csv),
+# same rounds/batch/top-k, same β, same proxy M (Bengio-2021 atom-graph MPNN). Only
+# the GENERATOR differs: RxnFlow's reaction-template + building-block synthesis
+# GFlowNet (carries a synthesis route -> has_route=1). This is the synthesizable-vs-
+# synthesizable head-to-head (FragGFN is the non-synth foil).
+#
+# Run (from repo root, rxnflow env; the bridge subprocess uses the rgfn env):
+#   conda run -n rxnflow python validation/generators/rxnflow/run_rxnflow_al.py \
+#       --cfg validation/configs/rxnflow_seh.yaml \
+#       --seed-csv experiments/active_learning/seh/seed_seh.csv \
+#       --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: active_learning/rxnflow_seh    # run dir: <root>/active_learning/rxnflow_seh/<timestamp>
+  root_dir: experiments               # overridden by --root-dir on Balam ($SCRATCH)
+
+loop:
+  n_rounds: 5                 # == active_learning_seh.gin ActiveLearningLoop.n_rounds
+  n_train_steps: 1000         # == Trainer.n_iterations (inner GFN budget / round)
+  query_batch_size: 200       # == ActiveLearningLoop.query_batch_size
+  sample_oversample: 4.0      # == ActiveLearningLoop.sample_oversample
+  top_k: 100                  # == ActiveLearningLoop.top_k
+  beta: 8                     # == beta (fixed inverse temperature)
+  system: seh
+  seed: 42
+  seed_csv: experiments/active_learning/seh/seed_seh.csv
+  smiles_column: smiles
+  label_column: label
+  oracle_threshold: -8.0      # sEH "good binder" Vina cutoff (~Q1 of the seed D_0; reporting-only)
+
+# Proxy M — same architecture/hyperparams as glue.proxies.LearnedGlueProxy in the
+# RGFN config (Bengio-2021 atom-graph MPNN, fit from scratch each round).
+proxy:
+  dim: 64
+  num_conv_steps: 12
+  lr: 5.0e-4
+  batch_size: 128
+  max_epochs: 100
+  patience: 10
+  val_fraction: 0.1
+  clip: 10.0
+
+# RxnFlow synthesis-GFlowNet generator hyperparams. env_dir is the prepared building
+# blocks + reaction templates (external/setup_rxnflow.sh writes it). The RGFN-specific
+# knobs live in the gin base — these are the RxnFlow equivalents.
+rxnflow:
+  env_dir: data/models/rxnflow_env   # prepared blocks + 71 templates (setup_rxnflow.sh)
+  max_reactions: 4                   # synthesis depth (trajectory length)
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 50
+  action_sampling_ratio: 0.01        # action-space subsampling (RxnFlow's key trick)
+  # device: auto (cuda if available)
+
+# Shared docking oracle, invoked across the env boundary by scripts/score_batch.py
+# under the rgfn env. `args` MUST match DockingSEHOracle.* in
+# configs/glue/active_learning_seh.gin so both entrants see the same oracle.
+oracle:
+  env: rgfn
+  conda_exe: conda
+  script: scripts/score_batch.py
+  name: docking_seh
+  higher_is_better: false      # Vina binding energy: more negative = stronger = better
+  args:
+    exhaustiveness: 8000
+    docking_batch_size: 25
+    n_conformers: 1
+    n_gpu: 1

@@ -1,0 +1,45 @@
+# FragGFN local SMOKE config — validates the whole loop on CPU with the cheap mock
+# oracle (no gnina/GPU/docking). Same code path as fraggfn_6td3.yaml, tiny budget.
+#   module load cuda/11.8.0   # the bridge runs in rgfn env -> dgl needs it
+#   conda run -n fraggfn python validation/generators/fraggfn/run_fraggfn_al.py \
+#       --cfg validation/configs/fraggfn_smoke.yaml \
+#       --seed-csv experiments/active_learning/6td3/seed_6td3.csv \
+#       --device cpu --root-dir /tmp/fraggfn_smoke
+
+run:
+  name: active_learning/fraggfn_smoke
+  root_dir: /tmp/fraggfn_smoke
+
+loop:
+  n_rounds: 2
+  n_train_steps: 5
+  query_batch_size: 6
+  sample_oversample: 6.0
+  top_k: 5
+  beta: 8
+  system: 6td3
+  seed: 42
+  seed_csv: experiments/active_learning/6td3/seed_6td3.csv
+  oracle_threshold: -2.0
+
+proxy:
+  dim: 32
+  num_conv_steps: 3
+  max_epochs: 5
+  patience: 3
+  batch_size: 64
+
+gflownet:
+  max_nodes: 7
+  num_emb: 64
+  num_layers: 2
+  sampling_tau: 0.9
+  print_every: 1
+
+oracle:
+  env: rgfn
+  conda_exe: conda
+  script: scripts/score_batch.py
+  name: mock                 # cheap CPU stand-in (MockGlueOracle, higher_is_better)
+  higher_is_better: true
+  args: {}

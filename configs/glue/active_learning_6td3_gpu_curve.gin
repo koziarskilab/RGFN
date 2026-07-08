@@ -1,0 +1,23 @@
+# Top-k-vs-oracle-calls curve run (Objective 1 / [bengio2021gflownet] Fig. 7).
+#
+# Identical to active_learning_6td3_gpu.gin (GPU differential oracle, beta=8,
+# 300 GFN steps/round, 32-molecule query batch) EXCEPT the loop runs longer so the
+# oracle-call axis has resolution: 10 rounds x 32 = 320 oracle calls, 10 points per
+# arm. top_k=100 so the running Top-K reward is a stable summary rather than a
+# 16-molecule tail.
+#
+# The two arms of the comparison are selected at launch, NOT here:
+#   --acquisition policy   -> the learned RGFN loop (fit M, train, sample)
+#   --acquisition random   -> uniform-policy baseline (no proxy/training)
+# so this single config drives both. See experiments/active_learning/6td3/
+# submit_curve_6td3.sh + launch_curve_6td3.sh (3 seeds x 2 arms).
+#
+# Run one arm/seed with:
+#   python scripts/active_learning.py --cfg configs/glue/active_learning_6td3_gpu_curve.gin \
+#       --seed 42 --acquisition policy
+
+include 'configs/glue/active_learning_6td3_gpu.gin'
+
+# Longer loop for curve resolution; larger Top-K for a stable reward summary.
+ActiveLearningLoop.n_rounds = 10
+ActiveLearningLoop.top_k = 100

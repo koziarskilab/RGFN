@@ -21,14 +21,14 @@ dataset tooling.
 
 - `rgfn/` and `configs/` = **pristine upstream RGFN** (kept mergeable; do not edit).
 - `glue/` = **all of our new code** (oracles, rewards, samplers, proxies, datasets).
-- `configs/glue/`, `scripts/`, `benchmarks/`, `models/`, `data/synthetic/`,
-  `research/preprocessing/`, `Logs/`, `docs/` = our configs, entry points, and work.
+- `configs/glue/`, `scripts/`, `validation/`, `experiments/`, `data/`,
+  `Logs/`, `docs/` = our configs, entry points, per-run experiments, inputs, and work.
 
 **Start here:**
 - [`CLAUDE.md`](CLAUDE.md) — the boundary rules + how to add a new oracle/reward/sampler.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full layout and rationale.
 - [`docs/PATCHES.md`](docs/PATCHES.md) — the few deliberate edits to upstream files.
-- [`Logs/RESEARCH_CONTEXT.md`](Logs/RESEARCH_CONTEXT.md) — the science and goals.
+- [`docs/RESEARCH_CONTEXT.md`](docs/RESEARCH_CONTEXT.md) — the science and goals.
 - [`Logs/references/`](Logs/references/) — the short shelf of papers the method
   and biology are grounded in; cite by key (e.g. `[koziarski2024rgfn]`).
 

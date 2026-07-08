@@ -7,7 +7,7 @@ How well does raw Tier 2 docking score alone separate real molecular glues from 
 
 ## Context & Summary
 
-**Context** — Entries 001–003 characterized discrimination using threshold-based metrics (percentage of molecules above a score cutoff, and the neosubstrate differential gap). Entry 003 showed a +78-percentage-point separation for 6TD3 vs. −3 points for CRBN on the neosubstrate differential. Those summary statistics collapse the full score distribution into a single threshold. ROC and PR curves show the full picture across every possible threshold and are the standard figures reviewers will expect when evaluating a scoring oracle. This entry produces those curves for both systems using their Tier 2 Vina score — the absolute ternary-complex docking score before any differential is applied. It also answers a specific ablation question flagged in RESEARCH_CONTEXT.md: does Tier 2 absolute score alone work, or is the neosubstrate differential truly necessary?
+**Context** — Entries 001–003 characterized discrimination using threshold-based metrics (percentage of molecules above a score cutoff, and the neosubstrate differential gap). Entry 003 showed a +78-percentage-point separation for 6TD3 vs. −3 points for CRBN on the neosubstrate differential. Those summary statistics collapse the full score distribution into a single threshold. ROC and PR curves show the full picture across every possible threshold and are the standard figures reviewers will expect when evaluating a scoring oracle. This entry produces those curves for both systems using their Tier 2 Vina score — the absolute ternary-complex docking score before any differential is applied. It also answers a specific ablation question flagged in docs/RESEARCH_CONTEXT.md: does Tier 2 absolute score alone work, or is the neosubstrate differential truly necessary?
 
 **Summary** — We compute ROC-AUC and average precision (area under the PR curve) for Tier 2 Vina score as a binary classifier (real glue vs. decoy) for 6TD3 and 5HXB, using the same result CSVs produced in entries 002 and 003. No new docking is run. The output is a two-panel figure (ROC left, PR right) with both systems overlaid.
 
@@ -29,19 +29,19 @@ NeurIPS reviewers will ask for the ablation: does the neosubstrate differential 
 
 ## Relevant Files
 
-Root: `./pre-processing/docking_gnina/analysis/`
+Root: `./research/preprocessing/docking_gnina/analysis/`
 
 **Scripts**
 - `plot_discrimination_curves.py` — loads Tier 2 Vina scores for both systems, builds ROC and PR curves via sklearn, outputs `discrimination_curves.png`; paths are resolved relative to the script via `pathlib` so it runs from any directory
 
 **Datasets** (inputs; no new docking run)
-- `./pre-processing/docking_6td3/known_results.csv` — per-molecule 6TD3 docking results for 160 known CDK12-DDB1 glues (from entry 002, job 69271)
-- `./pre-processing/docking_6td3/decoy_cdk_results.csv` — per-molecule 6TD3 docking results for 248 decoys (from entry 002, job 69271)
-- `./pre-processing/docking_gnina/known_crbn_results.csv` — per-molecule CRBN docking results for 136 anchorable known glues (from entry 003, job 69272)
-- `./pre-processing/docking_gnina/decoy_crbn_results.csv` — per-molecule CRBN docking results for 117 decoys (from entry 003, job 69272)
+- `./research/preprocessing/docking_6td3/known_results.csv` — per-molecule 6TD3 docking results for 160 known CDK12-DDB1 glues (from entry 002, job 69271)
+- `./research/preprocessing/docking_6td3/decoy_cdk_results.csv` — per-molecule 6TD3 docking results for 248 decoys (from entry 002, job 69271)
+- `./research/preprocessing/docking_gnina/known_crbn_results.csv` — per-molecule CRBN docking results for 136 anchorable known glues (from entry 003, job 69272)
+- `./research/preprocessing/docking_gnina/decoy_crbn_results.csv` — per-molecule CRBN docking results for 117 decoys (from entry 003, job 69272)
 
 **Results**
-- `./pre-processing/docking_gnina/analysis/discrimination_curves.png` — two-panel ROC + PR figure; both systems overlaid; dashed baseline lines on PR panel
+- `./research/preprocessing/docking_gnina/analysis/discrimination_curves.png` — two-panel ROC + PR figure; both systems overlaid; dashed baseline lines on PR panel
 
 ## Relevant Versions
 
@@ -66,7 +66,7 @@ Root: `./pre-processing/docking_gnina/analysis/`
 4. Render two-panel figure: ROC left, PR right; dashed diagonal reference on ROC; dashed class-baseline references on PR. Save at 200 dpi.
 
 ```
-~/anaconda3/bin/python pre-processing/docking_gnina/analysis/plot_discrimination_curves.py
+~/anaconda3/bin/python research/preprocessing/docking_gnina/analysis/plot_discrimination_curves.py
 ```
 
 ## Results

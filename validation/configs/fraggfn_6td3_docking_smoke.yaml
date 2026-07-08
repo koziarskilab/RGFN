@@ -1,0 +1,39 @@
+# SMOKE test — FragGFN per-step DOCKING via the cross-env bridge (DockingBridgeReward).
+# Proves the baseline docking mechanism end-to-end: each training step shells out to
+# `conda run -n rgfn scripts/score_batch.py --oracle docking_6td3_gpu`, frees the GPU cache
+# first (Logs/014), parses dvina, and trains FragGFN on clip(-dvina). 3 steps + a tiny batch:
+# a few minutes on a GPU node. NOT a science run.
+#
+# Run (repo root, fraggfn env):
+#   conda run -n fraggfn python validation/generators/fraggfn/run_fraggfn_fixed.py \
+#       --cfg validation/configs/fraggfn_6td3_docking_smoke.yaml --root-dir $SCRATCH/rgfn_runs/experiments
+
+run:
+  name: fixed_reward/fraggfn_6td3_smoke
+  root_dir: experiments
+  seed: 42
+
+fixed_reward:
+  n_train_steps: 3
+  n_samples: 15
+  sample_oversample: 3.0
+  top_k: 10
+  beta: 4                       # docking inverse temperature (matches RGFN docking)
+  system: 6td3
+  reward_name: 6td3_diff
+  score_units: "clip(-dvina) reward (higher is better; raw dvina in raw_score column)"
+
+# Per-step GPU docking across the env boundary (FragGFN uses its OWN fragment library).
+reward:
+  type: docking
+  oracle: docking_6td3_gpu
+  norm: 1.0
+  clip: 10.0
+
+gflownet:
+  max_nodes: 9
+  num_emb: 128
+  num_layers: 4
+  sampling_tau: 0.9
+  learning_rate: 1.0e-4
+  print_every: 1

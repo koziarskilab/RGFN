@@ -1,0 +1,57 @@
+# Fixed-reward (single-shot) RGFN on the 6TD3 two-tier docking DIFFERENTIAL.
+#
+# Trains the GFN ONCE with the 6TD3/CR8 neosubstrate differential (Vina Tier2 - Tier1, the
+# project's validated glue-cooperativity signal; Logs/002/006/013) called DIRECTLY as the
+# reward every training step. Unlike the sEH/ClpP single-target docking runs, the reward is
+# the *differential* oracle, exposed to the GFN through the generic OracleRewardProxy adapter
+# (glue/proxies/oracle_reward_proxy.py): it flips dvina (lower-is-better) to a non-negative
+# higher-is-better reward via clip(-dvina/norm, 0, inf) and frees torch's GPU cache before
+# each dock so QuickVina2-GPU is not starved during training (Logs/014). No AL loop, no oracle
+# refit. RGFN's entry in the 6TD3 fixed-reward matrix. See docs/plan + Logs/021.
+#
+# Run:  python scripts/fixed_reward.py --cfg configs/glue/fixed_reward_6td3.gin --seed 42
+# (Balam compute node only: needs a GPU + QuickVina2-GPU + gnina + the 6TD3 receptors.)
+
+include 'configs/rgfn_base.gin'
+include 'configs/envs/reaction_docking.gin'   # docking-capable reaction env (max_num_reactions=4)
+
+# --- Reward generator: the 6TD3 differential oracle wrapped as a GFN reward -------------
+# OracleRewardProxy(Docking6TD3GpuOracle) IS the reward (%train_proxy); no learned proxy,
+# no refit. The oracle docks with QuickVina2-GPU (pose gen) + gnina --score_only (CNN pose
+# select + two-tier Vina), exactly the validated GPU pipeline (Logs/013).
+proxy/gin.singleton.constructor = @OracleRewardProxy
+train_proxy = @proxy/gin.singleton()
+valid_proxy = %train_proxy
+OracleRewardProxy.oracle = @Docking6TD3GpuOracle()
+OracleRewardProxy.norm = 1.0
+OracleRewardProxy.free_gpu_cache = True
+
+beta = 4   # docking-reward inverse temperature (matches the RGFN docking benchmark)
+
+# --- Shared SMALL library (glue_standard_v1) via GlueReactionDataFactory -----------------
+# Overrides the docking env's @ReactionDataFactory singleton so RGFN builds from the SAME
+# 418-fragment / 112-template standard set as RxnFlow / SCENT (docs/CHEM_LIBRARY_FORMAT.md).
+data_factory/gin.singleton.constructor = @GlueReactionDataFactory
+GlueReactionDataFactory.library_dir = 'data/libraries/glue_standard_v1'
+GlueReactionDataFactory.docking = True
+
+# Docking-in-the-loop is ~0.8-1.0 s/mol; cap iterations so the run fits the SLURM walltime
+# (~9-11h at 400 iters x ~120 mol/iter; benchmark 69691). Matches the sEH-docking cap.
+Trainer.n_iterations = 400
+
+# Lean live metrics (metric audit, Logs/020): keep only cheap per-step reductions; QED /
+# scaffolds / modes / diversity are recomputed post-hoc by glue/metrics/dataset_metrics.py.
+train_metrics = [@StandardGFNMetrics(), @FractionEarlyTerminate(), @UniqueMolecules()]
+
+# --- Fixed-reward pipeline wiring (Trainer + reward share ONE proxy instance) ------------
+trainer/gin.singleton.constructor = @Trainer
+trainer = @trainer/gin.singleton()
+FixedRewardPipeline.trainer = %trainer
+FixedRewardPipeline.reward_generator = %train_proxy
+FixedRewardPipeline.n_samples = 200
+FixedRewardPipeline.sample_oversample = 6.0
+FixedRewardPipeline.top_k = 100
+FixedRewardPipeline.system = '6td3'
+FixedRewardPipeline.generator_name = 'rgfn'
+FixedRewardPipeline.reward_name = '6td3_diff'
+FixedRewardPipeline.score_units = 'clip(-dvina) reward (higher is better; raw dvina in raw_score column)'

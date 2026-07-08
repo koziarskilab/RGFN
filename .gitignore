@@ -5,6 +5,11 @@ configs/grid_search/
 Logs/references/pdfs/*
 !Logs/references/pdfs/.gitkeep
 
+# Cloned upstream baseline code — installed by external/setup_*.sh, NOT vendored
+# (e.g. external/gflownet for FragGFN). Keeps the setup scripts tracked, the heavy
+# upstream trees out. See docs/ARCHITECTURE.md + validation/generators/README.md.
+external/*/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -164,7 +169,6 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
-experiments/
 ignored/
 
 # Vina-GPU-2.1 build artifacts (compiled docking oracle)
@@ -175,9 +179,6 @@ quickvina_dir
 Miniconda3-latest-Linux-x86_64.sh
 *.run
 
-# Scratch run symlinks
-experiments
-
 # Docking / structure data artifacts (regenerable from pre-processing scripts)
 *.pdb
 *.pdbqt
@@ -186,19 +187,48 @@ experiments
 *.csv
 
 # superseded scaffold library (large; not part of the curated pipeline)
-research/preprocessing/test-data/Enamine_CRBN_Molecular_Glue_Library_*.smiles
+data/validation-molecules/Enamine_CRBN_Molecular_Glue_Library_*.smiles
 
-# Docking run outputs (regenerable; written by research/preprocessing docking scripts)
+# Docking run outputs (regenerable; written by the experiments/ docking scripts)
 cluster_out/
 cluster_out_crbn/
-research/preprocessing/**/cluster_out*/
+experiments/**/cluster_out*/
 
-# Model checkpoints / weights (large; document provenance in models/README.md)
-models/**/*.ckpt
-models/**/*.pt
-models/**/*.pth
+# Model checkpoints / weights (large; document provenance in data/models/README.md)
+data/models/**/*.ckpt
+data/models/**/*.pt
+data/models/**/*.pth
+
+# AiZynthFinder public dataset (templates/policy/stock; large, fetched by
+# external/setup_aizynthfinder.sh via download_public_data — never commit)
+data/models/aizynthfinder/
+
+# RxnFlow building-block environment (fingerprints/masks/descriptors + block list;
+# large, generated/fetched by external/setup_rxnflow.sh — never commit)
+data/models/rxnflow_env/
+
+# Weights & Biases run output (generated locally; includes broken latest-run symlink)
+wandb/
 
 # Generated synthetic datasets (keep the dir + docs, ignore the generated outputs)
 data/synthetic/*
 !data/synthetic/README.md
 !data/synthetic/.gitkeep
+
+# Curated validation-molecule inputs (override the global *.csv ignore above)
+!data/validation-molecules/*.csv
+
+# violin plots (regenerable)
+experiments/ablations/sixway/violins_known_vs_decoy.png
+
+# --- experiments/: one committed dir per run/experiment (code + seeds + small
+# results), grouped by type {active_learning, oracle_validation, ablations}. Run
+# OUTPUTS — timestamped run dirs (YYYY-MM-DD_*) and everything under them
+# (checkpoints, logs, modes, per-round CSVs) — are regenerable and ignored by
+# pattern; all committed code/seeds/results outside them stay tracked. ---
+experiments/**/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_*/
+# committed seed + result CSVs sit directly in a run dir (override the global *.csv ignore)
+!experiments/**/seed_*.csv
+!experiments/**/*_results.csv
+
+oracle/drd2_current.pkl

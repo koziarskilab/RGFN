@@ -30,7 +30,7 @@ This entry is the compute-methods justification for the paper. NeurIPS reviewers
 ## Relevant Files
 
 Scripts:
-- `./pre-processing/docking_6td3/dock_cluster.py` — batched 6TD3 docking driver; used for config B (local, `N_GPU=1 PROCS_PER_GPU=4`) and config C (cluster defaults)
+- `./research/preprocessing/docking_6td3/dock_cluster.py` — batched 6TD3 docking driver; used for config B (local, `N_GPU=1 PROCS_PER_GPU=4`) and config C (cluster defaults)
 - `./docking_gnina/dock_cluster_crbn.py` — batched CRBN docking driver; used for config C
 
 Note: config A sequential runners (`dock_6td3_batch.py` / `batch_anchor_dock.py`) have been removed and consolidated into the batching drivers above. The docking method is unchanged; only the sharding differs.
