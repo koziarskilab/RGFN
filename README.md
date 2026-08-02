@@ -91,6 +91,12 @@ To train the RGFN using sEH proxy, run:
 python train.py --cfg configs/rgfn_seh_proxy.gin
 ```
 
+### Train on docker
+
+```sh
+docker compose run workspace python train.py --cfg configs/rgfn_seh_proxy.gin
+```
+
 The script will dump the results under `experiments/rgfn_seh_proxy/<timestamp>` directory. Our code uses gin-config
 package that allows for lightweight models configuration along with dependency injection.
 
